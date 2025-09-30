@@ -2,7 +2,7 @@ import { Clipboard, Toast, closeMainWindow, showHUD, showToast } from "@raycast/
 import fetch from "node-fetch";
 import { Category, Svg } from "../type";
 import { ONE_WEEK_MS, withCache } from "./cache";
-import { writeFileSync } from "fs";
+import { readFileSync, writeFileSync } from "fs";
 import path from "path";
 import os from "os";
 import { getPrefixFromSvgUrl, prefixSvgIds } from "./prefix-svg";
@@ -38,6 +38,12 @@ export const fetchCategories = async () => {
 };
 
 export const fetchSvg = async (url: string) => {
+  // Handle local file paths (absolute paths starting with /)
+  if (url.startsWith("/")) {
+    const svg = readFileSync(url, "utf-8");
+    return prefixSvgIds(svg, getPrefixFromSvgUrl(url));
+  }
+
   return withCache(
     `svgl_svg_${url}`,
     async () => {
@@ -106,10 +112,18 @@ export const fetchAndCopySvgFile = async (url: string, showContent: string, file
     title: "Fetching svg file",
   });
   try {
-    const svg = await fetchSvg(url);
+    let filePath: string;
+
+    // Handle local file paths
+    if (url.startsWith("/")) {
+      filePath = url;
+    } else {
+      const svg = await fetchSvg(url);
+      filePath = path.join(os.tmpdir(), `${fileName}.svg`);
+      writeFileSync(filePath, svg, "utf-8");
+    }
+
     await toast.hide();
-    const filePath = path.join(os.tmpdir(), `${fileName}.svg`);
-    writeFileSync(filePath, svg, "utf-8");
     Clipboard.copy({
       file: filePath,
     });
@@ -193,13 +207,21 @@ export const fetchAndCopyPng = async (url: string, fileName: string, scale: numb
     title: `Converting SVG to PNG (${scale}x)`,
   });
   try {
-    const svg = await fetchSvg(url);
     // Sanitize fileName to avoid issues with special characters
     const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9-_]/g, "_");
-    const svgPath = path.join(os.tmpdir(), `${sanitizedFileName}-temp.svg`);
     const pngPath = path.join(os.tmpdir(), `${sanitizedFileName}-${scale}x.png`);
 
-    writeFileSync(svgPath, svg, "utf-8");
+    let svgPath: string;
+
+    // Handle local file paths
+    if (url.startsWith("/")) {
+      svgPath = url;
+    } else {
+      // For remote URLs, fetch and save to temp
+      const svg = await fetchSvg(url);
+      svgPath = path.join(os.tmpdir(), `${sanitizedFileName}-temp.svg`);
+      writeFileSync(svgPath, svg, "utf-8");
+    }
 
     // Find rsvg-convert binary
     const rsvgConvertPath = await findRsvgConvert();

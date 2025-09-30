@@ -1,9 +1,10 @@
-import { Toast, showToast } from "@raycast/api";
+import { Toast, showToast, getPreferenceValues } from "@raycast/api";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { usePinSvg } from "../hooks/use-pin-svg";
 import { useRecentSvg } from "../hooks/use-recent-svg";
 import { Category, Svg } from "../type";
 import { fetchCategories, fetchSvgs } from "../utils/fetch";
+import { loadLocalSvgs } from "../utils/local-icons";
 
 interface AppContextProps {
   svgs: Svg[];
@@ -70,10 +71,23 @@ export const SvglExtensionProvider = ({ children }: { children: React.ReactNode 
     async function fetchData() {
       setIsAPILoading(true);
       try {
-        const svgs = await fetchSvgs();
-        const categories = await fetchCategories();
-        setSvgs(svgs);
-        setCategories(categories);
+        const apiSvgs = await fetchSvgs();
+        const apiCategories = await fetchCategories();
+
+        // Load local SVGs
+        const preferences = getPreferenceValues<Preferences.Index>();
+        const localSvgs = loadLocalSvgs(preferences.localIconsPath);
+
+        // Merge API and local SVGs
+        const allSvgs = [...apiSvgs, ...localSvgs];
+
+        // Add Custom category if there are local SVGs
+        const allCategories = localSvgs.length > 0
+          ? [...apiCategories, { category: "Custom", total: localSvgs.length }]
+          : apiCategories;
+
+        setSvgs(allSvgs);
+        setCategories(allCategories);
       } catch (error) {
         if (error instanceof Error) {
           await showToast({
