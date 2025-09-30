@@ -84,6 +84,44 @@
           ]
         },
         {
+          "name": "defaultPngScale",
+          "title": "Default PNG Scale",
+          "description": "Default scale factor for PNG conversion",
+          "type": "dropdown",
+          "required": false,
+          "defaultValue": "4",
+          "data": [
+            {
+              "value": "1",
+              "title": "1x"
+            },
+            {
+              "value": "2",
+              "title": "2x"
+            },
+            {
+              "value": "4",
+              "title": "4x"
+            },
+            {
+              "value": "8",
+              "title": "8x"
+            },
+            {
+              "value": "16",
+              "title": "16x"
+            },
+            {
+              "value": "32",
+              "title": "32x"
+            },
+            {
+              "value": "64",
+              "title": "64x"
+            }
+          ]
+        },
+        {
           "name": "defaultPackageManager",
           "title": "Default Package Manager",
           "description": "Default package manager",
