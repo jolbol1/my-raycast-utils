@@ -71,7 +71,7 @@ export default function SvgDetail({ svg, category }: SvgDetailProps) {
   const scales = [defaultPngScale, ...allScales.filter((s) => s !== defaultPngScale)];
 
   return (
-    <Grid columns={4} navigationTitle={`${svg.title} - Variants`} searchBarPlaceholder="Search variants">
+    <Grid inset={Grid.Inset.Medium} columns={4} navigationTitle={`${svg.title} - Variants`} searchBarPlaceholder="Search variants">
       <Grid.Section title={svg.title} subtitle={`${variants.length} variant${variants.length > 1 ? "s" : ""}`}>
         {variants.map((variant, index) => (
           <Grid.Item
