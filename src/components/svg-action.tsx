@@ -96,7 +96,7 @@ const SvgAction = ({ svg, category }: SvgActionProps) => {
     ? [svgDefaultAction ?? "copySvg", ...orderedKeys.filter((key) => key !== svgDefaultAction)]
     : orderedKeys;
 
-  return <ActionPanel>{reorderedKeys.map((key) => actionSections[key])}</ActionPanel>;
+  return <>{reorderedKeys.map((key) => actionSections[key])}</>;
 };
 
 export default SvgAction;

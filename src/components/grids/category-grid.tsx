@@ -1,13 +1,23 @@
-import { Grid } from "@raycast/api";
+import { Action, ActionPanel, Grid } from "@raycast/api";
 import { useSvglExtension } from "../app-context";
+import SvgDetail from "../svg-detail";
 import SvgAction from "../svg-action";
+import { fetchAndCopyPng } from "../../utils/fetch";
 
 interface CategoryGridProps {
   selectCategory: string;
 }
 
 const CategoryGrid = ({ selectCategory }: CategoryGridProps) => {
-  const { categories, svgs } = useSvglExtension();
+  const { categories, svgs, addRecentSvgId } = useSvglExtension();
+
+  const getDefaultRoute = (svg: any) => {
+    if (typeof svg.route === "string") {
+      return svg.route;
+    }
+    return svg.route.light;
+  };
+
   return (
     <Grid.Section
       title={`${selectCategory}`}
@@ -28,7 +38,20 @@ const CategoryGrid = ({ selectCategory }: CategoryGridProps) => {
               tooltip: svg.title,
             }}
             title={svg.title}
-            actions={<SvgAction svg={svg} category={selectCategory} />}
+            actions={
+              <ActionPanel>
+                <Action.Push title="View Details" target={<SvgDetail svg={svg} category={selectCategory} />} />
+                <Action
+                  title="Copy 4x PNG"
+                  shortcut={{ modifiers: ["cmd"], key: "return" }}
+                  onAction={() => {
+                    addRecentSvgId(svg.id);
+                    fetchAndCopyPng(getDefaultRoute(svg), svg.title, 4);
+                  }}
+                />
+                <SvgAction svg={svg} category={selectCategory} />
+              </ActionPanel>
+            }
           />
         ))}
     </Grid.Section>

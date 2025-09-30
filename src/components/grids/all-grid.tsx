@@ -1,11 +1,20 @@
-import { Grid } from "@raycast/api";
+import { Action, ActionPanel, Grid } from "@raycast/api";
 import { useSvglExtension } from "../app-context";
+import SvgDetail from "../svg-detail";
 import SvgAction from "../svg-action";
 import PinnedGrid from "./pinned-grid";
 import RecentGrid from "./recent-grid";
+import { fetchAndCopyPng } from "../../utils/fetch";
 
 const AllGrid = () => {
-  const { categories, svgs } = useSvglExtension();
+  const { categories, svgs, addRecentSvgId } = useSvglExtension();
+
+  const getDefaultRoute = (svg: any) => {
+    if (typeof svg.route === "string") {
+      return svg.route;
+    }
+    return svg.route.light;
+  };
 
   return (
     <>
@@ -28,7 +37,23 @@ const AllGrid = () => {
                   tooltip: svg.title,
                 }}
                 title={svg.title}
-                actions={<SvgAction svg={svg} category={category.category} />}
+                actions={
+                  <ActionPanel>
+                    <Action.Push
+                      title="View Details"
+                      target={<SvgDetail svg={svg} category={category.category} />}
+                    />
+                    <Action
+                      title="Copy 4x PNG"
+                      shortcut={{ modifiers: ["cmd"], key: "return" }}
+                      onAction={() => {
+                        addRecentSvgId(svg.id);
+                        fetchAndCopyPng(getDefaultRoute(svg), svg.title, 4);
+                      }}
+                    />
+                    <SvgAction svg={svg} category={category.category} />
+                  </ActionPanel>
+                }
               />
             ))}
         </Grid.Section>
