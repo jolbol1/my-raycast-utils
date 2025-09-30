@@ -17,9 +17,15 @@
   "commands": [
     {
       "name": "index",
-      "title": "Search SVG Logos",
-      "description": "Search SVG logos via svgl",
+      "title": "Search SVG Icons",
+      "description": "Search SVG icons via svgl & local icons",
       "mode": "view",
+      "keywords": [
+        "svg",
+        "icon",
+        "svgl",
+        "local icons"
+      ],
       "preferences": [
         {
           "name": "svgDefaultAction",
