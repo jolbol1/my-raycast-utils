@@ -6,7 +6,8 @@
   "icon": "command-icon.png",
   "author": "1weiho",
   "contributors": [
-    "ridemountainpig"
+    "ridemountainpig",
+    "jolbol1"
   ],
   "categories": [
     "Design Tools",
@@ -43,6 +44,10 @@
             {
               "value": "copyShadcnRegistry",
               "title": "Copy shadcn/ui Registry"
+            },
+            {
+              "value": "copyPng",
+              "title": "Copy PNG"
             },
             {
               "value": "copyReactComponent",
@@ -104,18 +109,6 @@
           ]
         }
       ]
-    },
-    {
-      "name": "request",
-      "title": "Request SVG Logo",
-      "description": "Request SVG logo to the svgl repository",
-      "mode": "view"
-    },
-    {
-      "name": "setup-shadcn-registry",
-      "title": "Setup shadcn/ui Registry",
-      "description": "Copy svgl registry JSON to clipboard",
-      "mode": "view"
     }
   ],
   "tools": [
@@ -346,6 +339,7 @@
     "@raycast/api": "^1.93.0",
     "@raycast/utils": "^1.14.0",
     "dedent": "^1.5.3",
+    "execa": "^8.0.1",
     "node-fetch": "^3.3.2"
   },
   "devDependencies": {

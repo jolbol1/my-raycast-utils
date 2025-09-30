@@ -12,6 +12,7 @@ import SvgInfoActions from "./actions/svg-info-actions";
 import { Svg, SvgActionKey } from "../type";
 import PinSvgAction from "./actions/pin-svg-action";
 import CopyShadcnRegistryActions from "./actions/copy-shadcn-registry-actions";
+import CopyPngActions from "./actions/copy-png-actions";
 
 interface SvgActionProps {
   svg: Svg;
@@ -41,6 +42,11 @@ const SvgAction = ({ svg, category }: SvgActionProps) => {
     copyShadcnRegistry: (
       <ActionPanel.Section title="Copy shadcn/ui Registry" key="copyShadcnRegistry">
         <CopyShadcnRegistryActions svg={svg} />
+      </ActionPanel.Section>
+    ),
+    copyPng: (
+      <ActionPanel.Section title="Copy PNG" key="copyPng">
+        <CopyPngActions svg={svg} />
       </ActionPanel.Section>
     ),
     copyReactComponent: (

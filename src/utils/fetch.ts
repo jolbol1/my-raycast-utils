@@ -6,6 +6,7 @@ import { writeFileSync } from "fs";
 import path from "path";
 import os from "os";
 import { getPrefixFromSvgUrl, prefixSvgIds } from "./prefix-svg";
+import { execa } from "execa";
 
 export const APP_URL = "https://svgl.app";
 export const API_URL = "https://api.svgl.app";
@@ -156,5 +157,75 @@ export const fetchAndCopyReactComponent = async (url: string, name: string, tsx:
       });
     }
     return;
+  }
+};
+
+const findRsvgConvert = async (): Promise<string> => {
+  // Common installation paths for rsvg-convert
+  const commonPaths = [
+    "/opt/homebrew/bin/rsvg-convert", // Homebrew on Apple Silicon
+    "/usr/local/bin/rsvg-convert", // Homebrew on Intel Mac
+    "/opt/local/bin/rsvg-convert", // MacPorts
+  ];
+
+  // Check common paths first
+  for (const binPath of commonPaths) {
+    try {
+      await execa(binPath, ["--version"]);
+      return binPath;
+    } catch {
+      // Continue to next path
+    }
+  }
+
+  // Fallback to using which command to find it in PATH
+  try {
+    const { stdout } = await execa("which", ["rsvg-convert"]);
+    return stdout.trim();
+  } catch {
+    throw new Error("rsvg-convert not found. Please install librsvg: brew install librsvg");
+  }
+};
+
+export const fetchAndCopyPng = async (url: string, fileName: string, scale: number) => {
+  const toast = await showToast({
+    style: Toast.Style.Animated,
+    title: `Converting SVG to PNG (${scale}x)`,
+  });
+  try {
+    const svg = await fetchSvg(url);
+    // Sanitize fileName to avoid issues with special characters
+    const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9-_]/g, "_");
+    const svgPath = path.join(os.tmpdir(), `${sanitizedFileName}-temp.svg`);
+    const pngPath = path.join(os.tmpdir(), `${sanitizedFileName}-${scale}x.png`);
+
+    writeFileSync(svgPath, svg, "utf-8");
+
+    // Find rsvg-convert binary
+    const rsvgConvertPath = await findRsvgConvert();
+
+    // Use rsvg-convert to scale SVG and convert to PNG
+    // This scales the SVG first, then rasterizes it to PNG
+    await execa(rsvgConvertPath, ["--zoom", scale.toString(), "--output", pngPath, svgPath]);
+
+    await toast.hide();
+    Clipboard.copy({
+      file: pngPath,
+    });
+    showHUD(`Copied ${scale}x PNG to clipboard`);
+    closeMainWindow();
+  } catch (error) {
+    if (error instanceof Error) {
+      await showToast({
+        style: Toast.Style.Failure,
+        title: "Failed to convert to PNG",
+        message: error.message,
+      });
+    } else {
+      await showToast({
+        style: Toast.Style.Failure,
+        title: "Failed to convert to PNG",
+      });
+    }
   }
 };
