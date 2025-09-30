@@ -27,13 +27,5 @@ export type SvgActionKey =
   | "copySvg"
   | "copySvgFile"
   | "copySvgWordmark"
-  | "copyShadcnRegistry"
   | "copyPng"
-  | "copyReactComponent"
-  | "copyVueComponent"
-  | "copySvelteComponent"
-  | "copyAngularComponent"
-  | "copySvgUrl"
-  | "copySvgWordmarkUrl"
   | "operation"
-  | "svgInfo";

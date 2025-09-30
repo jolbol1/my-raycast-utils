@@ -1,8 +1,8 @@
 {
   "$schema": "https://www.raycast.com/schemas/extension.json",
-  "name": "svgl",
-  "title": "Svgl",
-  "description": "Search SVG logos via svgl",
+  "name": "my-utils",
+  "title": "My Utils",
+  "description": "My custom utilities",
   "icon": "command-icon.png",
   "author": "1weiho",
   "contributors": [
@@ -48,44 +48,12 @@
               "title": "Copy SVG Wordmark"
             },
             {
-              "value": "copyShadcnRegistry",
-              "title": "Copy shadcn/ui Registry"
-            },
-            {
               "value": "copyPng",
               "title": "Copy PNG"
             },
             {
-              "value": "copyReactComponent",
-              "title": "Copy React Component"
-            },
-            {
-              "value": "copyVueComponent",
-              "title": "Copy Vue Component"
-            },
-            {
-              "value": "copySvelteComponent",
-              "title": "Copy Svelte Component"
-            },
-            {
-              "value": "copyAngularComponent",
-              "title": "Copy Angular Component"
-            },
-            {
-              "value": "copySvgUrl",
-              "title": "Copy SVG URL"
-            },
-            {
-              "value": "copySvgWordmarkUrl",
-              "title": "Copy SVG Wordmark URL"
-            },
-            {
               "value": "operation",
               "title": "Operation"
-            },
-            {
-              "value": "svgInfo",
-              "title": "SVG Info"
             }
           ]
         },
