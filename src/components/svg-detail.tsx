@@ -2,6 +2,7 @@ import { Action, ActionPanel, Grid, Icon, getPreferenceValues } from "@raycast/a
 import { Svg } from "../type";
 import { useSvglExtension } from "./app-context";
 import { fetchAndCopyPng } from "../utils/fetch";
+import SvgAction from "./svg-action";
 
 interface SvgDetailProps {
   svg: Svg;
@@ -78,7 +79,7 @@ export default function SvgDetail({ svg, category }: SvgDetailProps) {
             key={index}
             content={{
               value: { source: variant.route },
-              tooltip: variant.title,
+              tooltip: variant.title,         
             }}
             title={variant.title}
             actions={
@@ -94,6 +95,7 @@ export default function SvgDetail({ svg, category }: SvgDetailProps) {
                     }}
                   />
                 ))}
+                <SvgAction svg={svg} category={category} />
               </ActionPanel>
             }
           />

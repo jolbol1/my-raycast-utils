@@ -129,9 +129,74 @@
           ]
         }
       ]
+    },
+    {
+      "name": "remove-background",
+      "title": "Remove Image Background",
+      "description": "Remove background from an image in Finder or clipboard",
+      "mode": "no-view",
+      "keywords": [
+        "background",
+        "remove",
+        "image",
+        "fal-ai"
+      ],
+      "icon": "remove-command.png",
+      "arguments": [
+        {
+          "name": "model",
+          "type": "dropdown",
+          "placeholder": "Select model",
+          "required": false,
+          "data": [
+            {
+              "value": "fal-ai/bria/background/remove",
+              "title": "FAL AI (Online)"
+            },
+            {
+              "value": "offline",
+              "title": "Offline"
+            }
+          ]
+        },
+        {
+          "name": "customModel",
+          "type": "text",
+          "placeholder": "Custom model name (optional)",
+          "required": false
+        }
+      ],
+      "preferences": [
+        {
+          "name": "falApiKey",
+          "title": "FAL API Key",
+          "description": "API key for fal-ai background removal service",
+          "type": "password",
+          "required": false,
+          "placeholder": "Enter your fal-ai API key"
+        },
+        {
+          "name": "defaultModel",
+          "title": "Default Model",
+          "description": "Default model to use when dropdown is not selected",
+          "type": "dropdown",
+          "required": false,
+          "data": [
+            {
+              "value": "fal-ai/bria/background/remove",
+              "title": "FAL AI (Online)"
+            },
+            {
+              "value": "offline",
+              "title": "Offline"
+            }
+          ]
+        }
+      ]
     }
   ],
   "dependencies": {
+    "@fal-ai/client": "^1.6.2",
     "@raycast/api": "^1.93.0",
     "@raycast/utils": "^1.14.0",
     "dedent": "^1.5.3",

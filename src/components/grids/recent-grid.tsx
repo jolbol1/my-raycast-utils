@@ -49,7 +49,6 @@ const RecentGrid = () => {
                       fetchAndCopyPng(getDefaultRoute(svg), svg.title, 4);
                     }}
                   />
-                  <SvgAction svg={svg} category={category} />
                 </ActionPanel>
               }
             />
