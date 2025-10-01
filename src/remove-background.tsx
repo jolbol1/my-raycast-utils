@@ -8,7 +8,7 @@ import {
   LaunchProps,
 } from "@raycast/api";
 import {
-  getSourceImagePath,
+  getSourceImagePaths,
   removeBackgroundWithFal,
   removeBackgroundOffline,
 } from "./utils/background-removal";
@@ -35,8 +35,8 @@ export default async function Command(props: LaunchProps<{ arguments: Arguments 
   });
 
   try {
-    // Get source image
-    const sourceInfo = await getSourceImagePath();
+    // Get source images
+    const sourceInfo = await getSourceImagePaths();
 
     if (!sourceInfo) {
       toast.style = Toast.Style.Failure;
@@ -45,102 +45,120 @@ export default async function Command(props: LaunchProps<{ arguments: Arguments 
       return;
     }
 
-    const { path: sourcePath, isFinderFile } = sourceInfo;
-
-    // Calculate output path for fal-ai (only for Finder files)
-    let outputPath: string | undefined;
-    if (isFinderFile) {
-      // Save next to original with -removedbg suffix
-      const lastDotIndex = sourcePath.lastIndexOf(".");
-      if (lastDotIndex !== -1) {
-        const basePath = sourcePath.substring(0, lastDotIndex);
-        const extension = sourcePath.substring(lastDotIndex);
-        outputPath = `${basePath}-removedbg${extension}`;
-      } else {
-        outputPath = `${sourcePath}-removedbg`;
-      }
-    }
+    const { paths: sourcePaths, isFinderFile } = sourceInfo;
 
     // Determine which model to use
     // Priority: customModel > argModel > defaultModel preference > fallback default
     const selectedModel = customModel || argModel || preferences.defaultModel || "fal-ai/bria/background/remove";
 
-    toast.title = "Removing background...";
+    // Check API key if using fal-ai
+    if (selectedModel !== "offline" && !preferences.falApiKey) {
+      toast.style = Toast.Style.Failure;
+      toast.title = "FAL API key not configured";
+      toast.message = "Please configure your FAL API key in preferences";
+      return;
+    }
 
-    let resultPath: string;
+    const totalFiles = sourcePaths.length;
+    const resultPaths: string[] = [];
 
-    // Use offline or fal-ai based on selected model
-    if (selectedModel === "offline") {
-      resultPath = await removeBackgroundOffline(sourcePath);
+    // Process each file
+    for (let i = 0; i < totalFiles; i++) {
+      const sourcePath = sourcePaths[i];
+      const fileNum = i + 1;
 
-      // For clipboard images, the offline script outputs a file with -background-removed suffix
-      if (!isFinderFile) {
-        const lastDotIndex = resultPath.lastIndexOf(".");
+      toast.title = `Processing ${fileNum} of ${totalFiles}...`;
+      toast.message = "";
+
+      // Calculate output path for fal-ai (only for Finder files)
+      let outputPath: string | undefined;
+      if (isFinderFile) {
+        // Save next to original with -removedbg suffix
+        const lastDotIndex = sourcePath.lastIndexOf(".");
         if (lastDotIndex !== -1) {
-          const basePath = resultPath.substring(0, lastDotIndex);
-          const extension = resultPath.substring(lastDotIndex);
-          resultPath = `${basePath}-background-removed${extension}`;
+          const basePath = sourcePath.substring(0, lastDotIndex);
+          const extension = sourcePath.substring(lastDotIndex);
+          outputPath = `${basePath}-removedbg${extension}`;
         } else {
-          resultPath = `${resultPath}-background-removed`;
+          outputPath = `${sourcePath}-removedbg`;
         }
       }
 
-      toast.style = Toast.Style.Success;
-      toast.title = "Background removed!";
-      toast.message = "Using offline mode";
-    } else {
-      // Use fal-ai
-      if (!preferences.falApiKey) {
-        toast.style = Toast.Style.Failure;
-        toast.title = "FAL API key not configured";
-        toast.message = "Please configure your FAL API key in preferences";
-        return;
-      }
+      let resultPath: string;
 
       try {
-        resultPath = await removeBackgroundWithFal(sourcePath, outputPath, selectedModel);
-        toast.style = Toast.Style.Success;
-        toast.title = "Background removed!";
-        toast.message = `Using ${selectedModel}`;
-      } catch (error) {
-        console.error("FAL API failed, falling back to offline:", error);
-        toast.style = Toast.Style.Failure;
-        toast.title = "FAL API failed";
-        toast.message = error instanceof Error ? error.message : String(error);
+        // Use offline or fal-ai based on selected model
+        if (selectedModel === "offline") {
+          resultPath = await removeBackgroundOffline(sourcePath);
 
-        // Ask user if they want to use offline mode
-        const useOffline = await confirmAlert({
-          title: "FAL API Failed",
-          message: "Would you like to try offline background removal instead?",
-          primaryAction: {
-            title: "Use Offline Mode",
-          },
-          dismissAction: {
-            title: "Cancel",
-          },
-        });
-
-        if (useOffline) {
-          toast.style = Toast.Style.Animated;
-          toast.title = "Using offline mode...";
-          toast.message = "";
-
-          try {
-            resultPath = await removeBackgroundOffline(sourcePath);
-            toast.style = Toast.Style.Success;
-            toast.title = "Background removed!";
-            toast.message = "Using offline mode";
-          } catch (offlineError) {
-            throw new Error(`Offline mode failed: ${offlineError}`);
+          // For clipboard images, the offline script outputs a file with -background-removed suffix
+          if (!isFinderFile) {
+            const lastDotIndex = resultPath.lastIndexOf(".");
+            if (lastDotIndex !== -1) {
+              const basePath = resultPath.substring(0, lastDotIndex);
+              const extension = resultPath.substring(lastDotIndex);
+              resultPath = `${basePath}-background-removed${extension}`;
+            } else {
+              resultPath = `${resultPath}-background-removed`;
+            }
           }
         } else {
-          return;
+          // Use fal-ai
+          try {
+            resultPath = await removeBackgroundWithFal(sourcePath, outputPath, selectedModel);
+          } catch (error) {
+            console.error("FAL API failed for file:", sourcePath, error);
+
+            // Only ask once on the first failure
+            if (i === 0) {
+              toast.style = Toast.Style.Failure;
+              toast.title = "FAL API failed";
+              toast.message = error instanceof Error ? error.message : String(error);
+
+              const useOffline = await confirmAlert({
+                title: "FAL API Failed",
+                message: "Would you like to try offline background removal instead for all files?",
+                primaryAction: {
+                  title: "Use Offline Mode",
+                },
+                dismissAction: {
+                  title: "Cancel",
+                },
+              });
+
+              if (useOffline) {
+                toast.style = Toast.Style.Animated;
+                toast.title = `Processing ${fileNum} of ${totalFiles}...`;
+                toast.message = "Using offline mode";
+                resultPath = await removeBackgroundOffline(sourcePath);
+              } else {
+                throw new Error("Cancelled by user");
+              }
+            } else {
+              throw error;
+            }
+          }
         }
+
+        resultPaths.push(resultPath);
+      } catch (error) {
+        toast.style = Toast.Style.Failure;
+        toast.title = `Failed on file ${fileNum} of ${totalFiles}`;
+        toast.message = error instanceof Error ? error.message : String(error);
+        return;
       }
     }
 
-    // Copy result to clipboard
-    await Clipboard.copy({ file: resultPath });
+    // Copy last result to clipboard (or all results if multiple)
+    if (resultPaths.length === 1) {
+      await Clipboard.copy({ file: resultPaths[0] });
+    } else {
+      await Clipboard.copy({ file: resultPaths[resultPaths.length - 1] });
+    }
+
+    toast.style = Toast.Style.Success;
+    toast.title = `Processed ${totalFiles} ${totalFiles === 1 ? "image" : "images"}!`;
+    toast.message = selectedModel === "offline" ? "Using offline mode" : `Using ${selectedModel}`;
   } catch (error) {
     toast.style = Toast.Style.Failure;
     toast.title = "Failed to remove background";

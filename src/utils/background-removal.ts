@@ -56,16 +56,19 @@ export async function runBackgroundRemoval({ paths }: { paths: string[] }) {
   return output;
 }
 
-export async function getSourceImagePath(): Promise<{ path: string; isFinderFile: boolean } | null> {
-  // Try Finder file first
+export async function getSourceImagePaths(): Promise<{ paths: string[]; isFinderFile: boolean } | null> {
+  // Try Finder files first
   try {
     const selectedFiles = await getSelectedFinderItems();
     if (selectedFiles && selectedFiles.length > 0) {
-      const firstFile = selectedFiles[0];
-      // Check if it's an image file
+      // Filter for image files only
       const imageExtensions = [".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp"];
-      if (imageExtensions.some((ext) => firstFile.path.toLowerCase().endsWith(ext))) {
-        return { path: firstFile.path, isFinderFile: true };
+      const imagePaths = selectedFiles
+        .filter((file) => imageExtensions.some((ext) => file.path.toLowerCase().endsWith(ext)))
+        .map((file) => file.path);
+
+      if (imagePaths.length > 0) {
+        return { paths: imagePaths, isFinderFile: true };
       }
     }
   } catch (error) {
@@ -78,7 +81,7 @@ export async function getSourceImagePath(): Promise<{ path: string; isFinderFile
     if (clipboardContent.file) {
       // If clipboard has a file, store it as temporary file
       const tempPath = await storeClipboardImageAsTemporaryFile(clipboardContent.file);
-      return { path: tempPath, isFinderFile: false };
+      return { paths: [tempPath], isFinderFile: false };
     }
   } catch (error) {
     console.error("Error reading clipboard:", error);
