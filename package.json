@@ -131,6 +131,40 @@
       ]
     },
     {
+      "name": "transcribe-video",
+      "title": "Transcribe Video",
+      "description": "Transcribe a video file from Finder or clipboard",
+      "mode": "no-view",
+      "icon": "transcribe-command.png",
+      "keywords": [
+        "transcribe",
+        "video",
+        "audio",
+        "speech"
+      ]
+    },
+    {
+      "name": "delay-audio",
+      "title": "Delay Audio",
+      "description": "Delay audio in a video or audio file",
+      "mode": "no-view",
+      "icon": "delay-command.png",
+      "keywords": [
+        "delay",
+        "audio",
+        "sync",
+        "offset"
+      ],
+      "arguments": [
+        {
+          "name": "delay",
+          "type": "text",
+          "placeholder": "Delay in milliseconds (default: 50)",
+          "required": false
+        }
+      ]
+    },
+    {
       "name": "remove-background",
       "title": "Remove Image Background",
       "description": "Remove background from an image in Finder or clipboard",

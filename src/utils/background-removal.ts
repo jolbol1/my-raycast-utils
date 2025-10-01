@@ -24,18 +24,18 @@ export function getTempFilePath(): string {
   return _tempFilePath;
 }
 
-export async function storeClipboardImageAsTemporaryFile(imageUrl: string) {
+export async function storeClipboardFileAsTemporaryFile(fileUrl: string) {
   try {
-    const sourcePath = decodeURI(imageUrl.replace("file://", ""));
-    const imageData = await readFile(sourcePath);
+    const sourcePath = decodeURI(fileUrl.replace("file://", ""));
+    const fileData = await readFile(sourcePath);
 
     const tempFilePath = getTempFilePath();
 
-    await writeFile(tempFilePath, imageData);
+    await writeFile(tempFilePath, fileData);
 
     return tempFilePath;
   } catch (error) {
-    console.error("Error copying image file:", error);
+    console.error("Error copying file:", error);
 
     throw error;
   }
@@ -80,7 +80,7 @@ export async function getSourceImagePaths(): Promise<{ paths: string[]; isFinder
     const clipboardContent = await Clipboard.read();
     if (clipboardContent.file) {
       // If clipboard has a file, store it as temporary file
-      const tempPath = await storeClipboardImageAsTemporaryFile(clipboardContent.file);
+      const tempPath = await storeClipboardFileAsTemporaryFile(clipboardContent.file);
       return { paths: [tempPath], isFinderFile: false };
     }
   } catch (error) {
