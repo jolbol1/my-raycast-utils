@@ -22,10 +22,11 @@ export default function SvgDetail({ svg, category }: SvgDetailProps) {
   const variants: Variant[] = [];
 
   // Build variants list
-  const hasLightDark = typeof svg.route !== "string";
+  const hasLightDarkRoute = typeof svg.route !== "string";
+  const hasLightDarkWordmark = svg.wordmark !== undefined && typeof svg.wordmark !== "string";
   const hasWordmark = svg.wordmark !== undefined;
 
-  if (hasLightDark) {
+  if (hasLightDarkRoute) {
     // Light and Dark normal
     variants.push({
       title: "Light",
@@ -35,37 +36,31 @@ export default function SvgDetail({ svg, category }: SvgDetailProps) {
       title: "Dark",
       route: svg.route.dark,
     });
-
-    // Light and Dark wordmark
-    if (hasWordmark && typeof svg.wordmark !== "string") {
-      variants.push({
-        title: "Light Wordmark",
-        route: svg.wordmark.light,
-      });
-      variants.push({
-        title: "Dark Wordmark",
-        route: svg.wordmark.dark,
-      });
-    } else if (hasWordmark && typeof svg.wordmark === "string") {
-      variants.push({
-        title: "Wordmark",
-        route: svg.wordmark,
-      });
-    }
   } else {
     // Single normal
     variants.push({
       title: "Normal",
       route: svg.route as string,
     });
+  }
 
+  // Handle wordmarks separately
+  if (hasLightDarkWordmark) {
+    // Light and Dark wordmark
+    variants.push({
+      title: "Light Wordmark",
+      route: svg.wordmark.light,
+    });
+    variants.push({
+      title: "Dark Wordmark",
+      route: svg.wordmark.dark,
+    });
+  } else if (hasWordmark) {
     // Single wordmark
-    if (hasWordmark) {
-      variants.push({
-        title: "Wordmark",
-        route: svg.wordmark as string,
-      });
-    }
+    variants.push({
+      title: "Wordmark",
+      route: svg.wordmark as string,
+    });
   }
 
   const allScales = [1, 2, 4, 8, 16, 32, 64];
