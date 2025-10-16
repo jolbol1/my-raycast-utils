@@ -174,7 +174,7 @@ export const fetchAndCopyReactComponent = async (url: string, name: string, tsx:
   }
 };
 
-const findRsvgConvert = async (): Promise<string> => {
+export const findRsvgConvert = async (): Promise<string> => {
   // Common installation paths for rsvg-convert
   const commonPaths = [
     "/opt/homebrew/bin/rsvg-convert", // Homebrew on Apple Silicon

@@ -131,6 +131,58 @@
       ]
     },
     {
+      "name": "convert-svg-to-png",
+      "title": "Convert SVG to PNG",
+      "description": "Convert an SVG file to PNG with custom scale",
+      "mode": "no-view",
+      "icon": "command-icon.png",
+      "keywords": [
+        "svg",
+        "png",
+        "convert",
+        "scale",
+        "image"
+      ],
+      "arguments": [
+        {
+          "name": "scale",
+          "type": "dropdown",
+          "placeholder": "Select scale (default: 4x)",
+          "required": false,
+          "data": [
+            {
+              "value": "1",
+              "title": "1x"
+            },
+            {
+              "value": "2",
+              "title": "2x"
+            },
+            {
+              "value": "4",
+              "title": "4x"
+            },
+            {
+              "value": "8",
+              "title": "8x"
+            },
+            {
+              "value": "16",
+              "title": "16x"
+            },
+            {
+              "value": "32",
+              "title": "32x"
+            },
+            {
+              "value": "64",
+              "title": "64x"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "transcribe-video",
       "title": "Transcribe Video",
       "description": "Transcribe a video file from Finder or clipboard",
