@@ -77,10 +77,9 @@ export default async function Command(props: LaunchProps<{ arguments: Arguments 
         const lastDotIndex = sourcePath.lastIndexOf(".");
         if (lastDotIndex !== -1) {
           const basePath = sourcePath.substring(0, lastDotIndex);
-          const extension = sourcePath.substring(lastDotIndex);
-          outputPath = `${basePath}-removedbg${extension}`;
+          outputPath = `${basePath}-removedbg.png`;
         } else {
-          outputPath = `${sourcePath}-removedbg`;
+          outputPath = `${sourcePath}-removedbg.png`;
         }
       }
 
