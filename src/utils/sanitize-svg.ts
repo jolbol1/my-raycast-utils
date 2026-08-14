@@ -215,6 +215,40 @@ export const normalizeAlphaMasks = (svg: string): string | null => {
   return changed && !bailed ? result : null;
 };
 
+const XLINK_NS = "http://www.w3.org/1999/xlink";
+const USE_RE = /<use\b([^>]*?)(\/?)>/g;
+
+/**
+ * Raycast resolves only the legacy `xlink:href` on `<use>`, not the modern `href`, so a
+ * `<use href="#…">` draws nothing. Adding the legacy spelling alongside is harmless in
+ * renderers that already understand the modern one.
+ */
+export const addXlinkHrefToUse = (svg: string): string | null => {
+  let changed = false;
+
+  let output = svg.replace(USE_RE, (whole, attrs: string, selfClose: string) => {
+    if (/\bxlink:href\s*=/.test(attrs)) {
+      return whole;
+    }
+    const href = attrs.match(/(?:^|\s)href\s*=\s*"([^"]*)"/);
+    if (!href) {
+      return whole;
+    }
+    changed = true;
+    return `<use${attrs} xlink:href="${href[1]}"${selfClose}>`;
+  });
+
+  if (!changed) {
+    return null;
+  }
+
+  if (!/xmlns:xlink\s*=/.test(output)) {
+    output = output.replace(/<svg\b/, `<svg xmlns:xlink="${XLINK_NS}"`);
+  }
+
+  return output;
+};
+
 /**
  * Applies every rewrite Raycast needs. Returns `null` when the SVG renders correctly
  * as-is, in which case the original source is used unchanged.
@@ -232,6 +266,12 @@ export const sanitizeForRaycast = (svg: string): string | null => {
   const demasked = normalizeAlphaMasks(output);
   if (demasked !== null) {
     output = demasked;
+    changed = true;
+  }
+
+  const linked = addXlinkHrefToUse(output);
+  if (linked !== null) {
+    output = linked;
     changed = true;
   }
 
