@@ -1,4 +1,4 @@
-import { Action, ActionPanel, Grid, Icon } from "@raycast/api";
+import { Action, ActionPanel, Grid, Icon, Keyboard } from "@raycast/api";
 import { Svg } from "../type";
 import { fetchAndCopyPng } from "../utils/fetch";
 import { useRenderSource } from "../hooks/use-render-source";
@@ -14,7 +14,7 @@ interface SvgGridItemProps {
 }
 
 const SvgGridItem = ({ svg, id }: SvgGridItemProps) => {
-  const { addRecentSvgId } = useSvglExtension();
+  const { addRecentSvgId, refresh } = useSvglExtension();
   const { light, dark } = useRenderSource(svg.route);
 
   return (
@@ -35,6 +35,14 @@ const SvgGridItem = ({ svg, id }: SvgGridItemProps) => {
             }}
           />
           <SvgAction svg={svg} />
+          <ActionPanel.Section>
+            <Action
+              icon={Icon.ArrowClockwise}
+              title="Refresh Icons"
+              shortcut={Keyboard.Shortcut.Common.Refresh}
+              onAction={refresh}
+            />
+          </ActionPanel.Section>
         </ActionPanel>
       }
     />

@@ -1,11 +1,11 @@
 import { Clipboard, Toast, closeMainWindow, showHUD, showToast } from "@raycast/api";
-import { execa } from "execa";
 import { readFile, writeFile } from "fs/promises";
 import os from "os";
 import path from "path";
 import { Category, Svg } from "../type";
 import { ONE_WEEK_MS, withCache } from "./cache";
 import { getPrefixFromSvgUrl, prefixSvgIds } from "./prefix-svg";
+import { rasterize } from "./resvg";
 
 export const APP_URL = "https://svgl.app";
 export const API_URL = "https://api.svgl.app";
@@ -135,33 +135,6 @@ export const fetchAndCopyReactComponent = async (url: string, name: string, tsx:
   });
 };
 
-export const findRsvgConvert = async (): Promise<string> => {
-  // Common installation paths for rsvg-convert
-  const commonPaths = [
-    "/opt/homebrew/bin/rsvg-convert", // Homebrew on Apple Silicon
-    "/usr/local/bin/rsvg-convert", // Homebrew on Intel Mac
-    "/opt/local/bin/rsvg-convert", // MacPorts
-  ];
-
-  // Check common paths first
-  for (const binPath of commonPaths) {
-    try {
-      await execa(binPath, ["--version"]);
-      return binPath;
-    } catch {
-      // Continue to next path
-    }
-  }
-
-  // Fallback to using which command to find it in PATH
-  try {
-    const { stdout } = await execa("which", ["rsvg-convert"]);
-    return stdout.trim();
-  } catch {
-    throw new Error("rsvg-convert not found. Please install librsvg: brew install librsvg");
-  }
-};
-
 /** Keeps generated temp file names free of path separators and shell-hostile characters. */
 export const sanitizeFileName = (fileName: string) => fileName.replace(/[^a-zA-Z0-9-_]/g, "_");
 
@@ -177,12 +150,7 @@ export const convertSvgToPng = async (url: string, outputPath: string, scale: nu
     await writeFile(svgPath, svg, "utf-8");
   }
 
-  const rsvgConvertPath = await findRsvgConvert();
-
-  // Scale the SVG first, then rasterise it to PNG.
-  await execa(rsvgConvertPath, ["--zoom", scale.toString(), "--output", outputPath, svgPath]);
-
-  return outputPath;
+  return rasterize(svgPath, outputPath, { zoom: scale });
 };
 
 export const fetchAndCopyPng = async (url: string, fileName: string, scale: number) => {

@@ -3,6 +3,14 @@
 A personal Raycast extension: SVG search (via [svgl](https://svgl.app/) plus your own local icons), SVG→PNG
 conversion, background removal, and a couple of ffmpeg helpers.
 
+## Requirements
+
+`resvg` renders icons and powers the SVG→PNG conversion:
+
+```sh
+brew install resvg     # or: mise use -g resvg / cargo install resvg
+```
+
 ## Development
 
 This repo uses **pnpm**.
@@ -20,6 +28,13 @@ pnpm build        # ray build -e dist
 ### Search SVG Icons
 
 Browse, search, pin and copy logos from svgl.app — as SVG text, SVG file, or PNG at a chosen scale.
+
+Icons are rendered by rasterising them with [resvg](https://github.com/linebender/resvg) rather than handing
+the SVG to Raycast, whose image rendering does not resolve `clip-path`, ignores `mask-type: alpha`, and only
+understands the legacy `xlink:href` on `<use>` — about one icon in six uses at least one of those and would
+otherwise show as a blank tile. Renders are cached on disk and keyed by SVG content, so republished artwork
+produces a fresh image; **⌘R** in the grid clears every cache and reloads. Without resvg the extension still
+works, falling back to letting Raycast render the SVG directly.
 
 #### Local (custom) icons
 
@@ -49,11 +64,7 @@ load independently of the network, so they still appear when svgl.app is unreach
 ### Convert SVG to PNG
 
 Converts the SVG selected in Finder (saved next to the original) or copied to the clipboard (copied back to
-the clipboard). Requires `librsvg`:
-
-```sh
-brew install librsvg
-```
+the clipboard).
 
 ### Remove Image Background
 

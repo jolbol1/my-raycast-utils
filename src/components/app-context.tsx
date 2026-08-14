@@ -5,6 +5,7 @@ import { useRecentSvg } from "../hooks/use-recent-svg";
 import { Category, Svg } from "../type";
 import { fetchCategories, fetchSvgs } from "../utils/fetch";
 import { LOCAL_CATEGORY, loadLocalSvgs } from "../utils/local-icons";
+import { clearRenderCache } from "../utils/render-source";
 
 interface AppContextProps {
   svgs: Svg[];
@@ -18,6 +19,7 @@ interface AppContextProps {
   focusGridItem: (svgId: number, key: string) => void;
   recentSvgIds: number[];
   addRecentSvgId: (id: number) => void;
+  refresh: () => Promise<void>;
   isLoading: boolean;
 }
 
@@ -33,6 +35,7 @@ const defaultAppContext: AppContextProps = {
   focusGridItem: () => {},
   recentSvgIds: [],
   addRecentSvgId: () => {},
+  refresh: async () => {},
   isLoading: true,
 };
 
@@ -64,49 +67,57 @@ export const SvglExtensionProvider = ({ children }: { children: React.ReactNode 
     setSelectedItemKey(`${key}_${svgId}`);
   }, []);
 
+  const fetchData = useCallback(async () => {
+    setIsAPILoading(true);
+
+    // Local icons are loaded first and independently of the network, so a
+    // failing/slow svgl.app request never hides them.
+    const preferences = getPreferenceValues<Preferences.Index>();
+    const { svgs: localSvgs, error: localError } = loadLocalSvgs(preferences.localIconsPath);
+    const localCategories: Category[] =
+      localSvgs.length > 0 ? [{ category: LOCAL_CATEGORY, total: localSvgs.length }] : [];
+
+    setSvgs(localSvgs);
+    setCategories(localCategories);
+
+    if (localError && preferences.localIconsPath) {
+      await showToast({
+        style: Toast.Style.Failure,
+        title: "Local icons not loaded",
+        message: localError,
+      });
+    }
+
+    try {
+      const [apiSvgs, apiCategories] = await Promise.all([fetchSvgs(), fetchCategories()]);
+
+      setSvgs([...apiSvgs, ...localSvgs]);
+      setCategories([...apiCategories, ...localCategories]);
+    } catch (error) {
+      if (error instanceof Error) {
+        await showToast({
+          style: Toast.Style.Failure,
+          title: "Loading Failed",
+          message: error.message,
+        });
+      }
+    }
+    setIsAPILoading(false);
+  }, []);
+
   useEffect(() => {
     loadPinnedSvg();
     loadRecentSvg();
-
-    async function fetchData() {
-      setIsAPILoading(true);
-
-      // Local icons are loaded first and independently of the network, so a
-      // failing/slow svgl.app request never hides them.
-      const preferences = getPreferenceValues<Preferences.Index>();
-      const { svgs: localSvgs, error: localError } = loadLocalSvgs(preferences.localIconsPath);
-      const localCategories: Category[] =
-        localSvgs.length > 0 ? [{ category: LOCAL_CATEGORY, total: localSvgs.length }] : [];
-
-      setSvgs(localSvgs);
-      setCategories(localCategories);
-
-      if (localError && preferences.localIconsPath) {
-        await showToast({
-          style: Toast.Style.Failure,
-          title: "Local icons not loaded",
-          message: localError,
-        });
-      }
-
-      try {
-        const [apiSvgs, apiCategories] = await Promise.all([fetchSvgs(), fetchCategories()]);
-
-        setSvgs([...apiSvgs, ...localSvgs]);
-        setCategories([...apiCategories, ...localCategories]);
-      } catch (error) {
-        if (error instanceof Error) {
-          await showToast({
-            style: Toast.Style.Failure,
-            title: "Loading Failed",
-            message: error.message,
-          });
-        }
-      }
-      setIsAPILoading(false);
-    }
     fetchData();
   }, []);
+
+  /** Drops every cached list and render, then reloads from svgl.app. */
+  const refresh = useCallback(async () => {
+    clearRenderCache();
+    await showToast({ style: Toast.Style.Animated, title: "Refreshing icons" });
+    await fetchData();
+    await showToast({ style: Toast.Style.Success, title: "Icons refreshed" });
+  }, [fetchData]);
 
   return (
     <AppContext.Provider
@@ -122,6 +133,7 @@ export const SvglExtensionProvider = ({ children }: { children: React.ReactNode 
         focusGridItem,
         recentSvgIds,
         addRecentSvgId,
+        refresh,
         isLoading: isLoadingPinnedSvg || isLoadingRecentSvg || isAPILoading,
       }}
     >
