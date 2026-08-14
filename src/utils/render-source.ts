@@ -5,7 +5,7 @@ import { writeFile } from "fs/promises";
 import path from "path";
 import { FIVE_MINUTES_MS, ONE_WEEK_MS } from "./cache";
 import { fetchSvg } from "./fetch";
-import { stripFullCanvasClipPaths } from "./sanitize-svg";
+import { sanitizeForRaycast } from "./sanitize-svg";
 
 /**
  * Raycast cannot render `clip-path="url(#…)"`, so those icons come out blank when the
@@ -97,7 +97,7 @@ export const resolveRenderSource = async (url: string): Promise<string> => {
 
       try {
         const svg = await fetchSvg(url);
-        const sanitized = stripFullCanvasClipPaths(svg);
+        const sanitized = sanitizeForRaycast(svg);
         if (sanitized !== null) {
           mkdirSync(renderDir, { recursive: true });
           const target = sanitizedPathFor(url);

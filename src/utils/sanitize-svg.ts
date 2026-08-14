@@ -1,11 +1,20 @@
 /**
- * Raycast's image renderer does not resolve `clip-path="url(#…)"`. Anything wrapped
- * in one is clipped away entirely and the tile renders blank.
+ * Rewrites the two constructs Raycast's image renderer gets wrong, both of which make an
+ * icon render as a blank tile.
  *
- * In practice every clip path in the svgl library is a full-canvas rect (or the
- * equivalent `M0 0h{W}v{H}H0z` path) emitted by Figma/Illustrator, so dropping the
- * reference is visually a no-op. Clip paths that genuinely crop are left alone —
- * showing uncropped artwork would be worse than the status quo.
+ * 1. `clip-path="url(#…)"` is not resolved at all, so anything wrapped in one is clipped
+ *    away. In practice every clip path in the svgl library is a full-canvas rect (or the
+ *    equivalent `M0 0h{W}v{H}H0z` path) emitted by Figma/Illustrator, so dropping the
+ *    reference is visually a no-op. Clip paths that genuinely crop are left alone —
+ *    showing uncropped artwork would be worse than the status quo.
+ *
+ * 2. `mask-type: alpha` is ignored, so the mask falls back to the default *luminance*
+ *    type. A mask drawn in black (Next.js) or in a dark gradient (Bklit) then has
+ *    luminance ≈ 0 and hides everything it should have revealed. Where every paint in
+ *    the mask is fully opaque — true throughout this library, none of them use
+ *    `stop-opacity` — the alpha channel is 1 inside the shape and 0 outside, which is
+ *    exactly a luminance mask painted white. Repainting the mask white and dropping the
+ *    `mask-type` therefore preserves the shape precisely.
  */
 
 const VIEW_BOX_RE = /viewBox\s*=\s*"\s*([-\d.eE]+)[,\s]+([-\d.eE]+)[,\s]+([-\d.eE]+)[,\s]+([-\d.eE]+)\s*"/;
@@ -14,6 +23,9 @@ const CLIP_PATH_DEF_RE = /<clipPath[^>]*\bid="([^"]+)"[^>]*>([\s\S]*?)<\/clipPat
 
 /** A shape is treated as full-canvas if it covers at least this much of the viewBox. */
 const COVERAGE_THRESHOLD = 0.9;
+
+/** Corner radius above this fraction of the shape counts as a real crop, not a rounding. */
+const CORNER_TOLERANCE = 0.02;
 
 const attr = (tag: string, name: string): number | undefined => {
   const match = tag.match(new RegExp(`\\b${name}\\s*=\\s*"([-\\d.eE]+)"`));
@@ -108,6 +120,13 @@ const coversCanvas = (body: string, width: number, height: number): boolean => {
     const w = attr(rect[0], "width");
     const h = attr(rect[0], "height");
     if (w === undefined || h === undefined) return false;
+
+    // Rounded corners really do crop: Coinbase clips with rx=24 on a 48px box, which is
+    // a circle, not a full-canvas rect.
+    const rx = attr(rect[0], "rx") ?? 0;
+    const ry = attr(rect[0], "ry") ?? 0;
+    if (rx > w * CORNER_TOLERANCE || ry > h * CORNER_TOLERANCE) return false;
+
     const x = attr(rect[0], "x") ?? 0;
     const y = attr(rect[0], "y") ?? 0;
     return boxCoversCanvas({ minX: x, minY: y, maxX: x + w, maxY: y + h }, width, height);
@@ -120,6 +139,103 @@ const coversCanvas = (body: string, width: number, height: number): boolean => {
   }
 
   return false;
+};
+
+const MASK_DEF_RE = /<mask\b([^>]*)>([\s\S]*?)<\/mask>/g;
+const ALPHA_MASK_RE = /mask-type\s*[:=]\s*["']?\s*alpha/i;
+/**
+ * Anything that makes a paint partly transparent, which would break the white rewrite.
+ * Deliberately precise: a looser pattern also matches `flood-opacity`, a filter primitive
+ * attribute that says nothing about the mask's own paints.
+ */
+const TRANSPARENCY_RE = /(?:^|\s)(?:fill-|stop-|stroke-)?opacity\s*=|(?:^|[;{\s])opacity\s*:/i;
+/** A filter can reshape the alpha channel, so luminance would no longer match it. */
+const FILTER_USE_RE = /\sfilter\s*=\s*"url\(/i;
+const DRAWABLE_RE = /<(path|rect|circle|ellipse|polygon|polyline|line|g|use)\b([^>]*?)(\/?)>/g;
+const GRADIENT_DEF_RE = /<(linearGradient|radialGradient)\b[^>]*\bid="([^"]+)"[^>]*>([\s\S]*?)<\/\1>/g;
+
+/** Repaints the body of an alpha mask white so it behaves identically as a luminance mask. */
+const repaintMaskWhite = (body: string): string =>
+  body.replace(DRAWABLE_RE, (tag, name, attrs: string, selfClose) => {
+    const cleaned = attrs
+      .replace(/\sfill\s*=\s*"[^"]*"/g, "")
+      // A `fill:` declaration in the style attribute overrides the presentation
+      // attribute, so Vite's `style="fill:#000"` would keep the mask black.
+      .replace(/\sstyle\s*=\s*"([^"]*)"/g, (whole, css: string) => {
+        const stripped = css.replace(/(?:^|;)\s*fill\s*:[^;]*/g, "").replace(/^;+|;+$/g, "");
+        return stripped.trim() === "" ? "" : ` style="${stripped}"`;
+      });
+    return `<${name}${cleaned} fill="#fff"${selfClose}>`;
+  });
+
+/**
+ * Converts `mask-type: alpha` masks into equivalent luminance masks. Returns `null` when
+ * there is nothing to convert, or when any paint involved is not fully opaque.
+ */
+export const normalizeAlphaMasks = (svg: string): string | null => {
+  const gradients = new Map<string, string>();
+  for (const match of svg.matchAll(GRADIENT_DEF_RE)) {
+    gradients.set(match[2], match[3]);
+  }
+
+  let changed = false;
+  let bailed = false;
+
+  const result = svg.replace(MASK_DEF_RE, (whole, attrs: string, body: string) => {
+    if (!ALPHA_MASK_RE.test(attrs)) {
+      return whole;
+    }
+
+    // Any partial transparency means the alpha channel is not simply "1 inside the
+    // shape", so repainting white would change the result.
+    if (TRANSPARENCY_RE.test(body) || TRANSPARENCY_RE.test(attrs) || FILTER_USE_RE.test(body)) {
+      bailed = true;
+      return whole;
+    }
+    // Gradients can be referenced by attribute or from the style attribute.
+    for (const [, id] of body.matchAll(/fill\s*[=:]\s*"?url\(#([^)"]+)\)/g)) {
+      const stops = gradients.get(id);
+      if (stops === undefined || TRANSPARENCY_RE.test(stops)) {
+        bailed = true;
+        return whole;
+      }
+    }
+
+    const cleanedAttrs = attrs
+      .replace(/\sstyle\s*=\s*"[^"]*"/g, (style) => {
+        const stripped = style.replace(/mask-type\s*:\s*[^;"]*;?/gi, "");
+        return /style\s*=\s*"\s*"/.test(stripped) ? "" : stripped;
+      })
+      .replace(/\smask-type\s*=\s*"[^"]*"/gi, "");
+
+    changed = true;
+    return `<mask${cleanedAttrs}>${repaintMaskWhite(body)}</mask>`;
+  });
+
+  return changed && !bailed ? result : null;
+};
+
+/**
+ * Applies every rewrite Raycast needs. Returns `null` when the SVG renders correctly
+ * as-is, in which case the original source is used unchanged.
+ */
+export const sanitizeForRaycast = (svg: string): string | null => {
+  let output = svg;
+  let changed = false;
+
+  const declipped = stripFullCanvasClipPaths(output);
+  if (declipped !== null) {
+    output = declipped;
+    changed = true;
+  }
+
+  const demasked = normalizeAlphaMasks(output);
+  if (demasked !== null) {
+    output = demasked;
+    changed = true;
+  }
+
+  return changed ? output : null;
 };
 
 /**
