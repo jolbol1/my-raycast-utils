@@ -17,6 +17,13 @@
  *    `mask-type` therefore preserves the shape precisely.
  */
 
+/**
+ * Bumped whenever the rewrites below change. Cached results are keyed by it, so a new
+ * version invalidates decisions made by older logic — without it, an icon that a previous
+ * build decided needed no rewrite keeps that verdict until its week-long TTL expires.
+ */
+export const SANITIZER_VERSION = 2;
+
 const VIEW_BOX_RE = /viewBox\s*=\s*"\s*([-\d.eE]+)[,\s]+([-\d.eE]+)[,\s]+([-\d.eE]+)[,\s]+([-\d.eE]+)\s*"/;
 const CLIP_PATH_REF_RE = /\sclip-path\s*=\s*"url\(#([^)"]+)\)"/g;
 const CLIP_PATH_DEF_RE = /<clipPath[^>]*\bid="([^"]+)"[^>]*>([\s\S]*?)<\/clipPath>/g;
@@ -215,6 +222,62 @@ export const normalizeAlphaMasks = (svg: string): string | null => {
   return changed && !bailed ? result : null;
 };
 
+/**
+ * A clip path that genuinely crops cannot simply be dropped, but it can be expressed as a
+ * mask, which Raycast does render: clipping is binary alpha, and for opaque shapes that is
+ * exactly a luminance mask painted white. `clip-rule` becomes `fill-rule`, and the mask
+ * region is pinned to the viewBox so it cannot crop more than the clip did.
+ */
+export const convertClipPathsToMasks = (svg: string): string | null => {
+  const referenced = [...svg.matchAll(CLIP_PATH_REF_RE)].map((match) => match[1]);
+  if (referenced.length === 0) {
+    return null;
+  }
+
+  const definitions = new Map<string, string>();
+  for (const match of svg.matchAll(CLIP_PATH_DEF_RE)) {
+    definitions.set(match[1], match[2]);
+  }
+
+  // A `<use>` inside the clip path draws borrowed content whose own fill would survive the
+  // white repaint, so the mask would not match the clip.
+  for (const id of referenced) {
+    if (definitions.get(id)?.includes("<use")) {
+      return null;
+    }
+  }
+
+  // An element carrying both attributes would need two masks, which cannot be expressed.
+  if (/\smask\s*=\s*"url\(#[^)"]+\)"[^>]*\sclip-path\s*=|\sclip-path\s*=[^>]*\smask\s*=\s*"url\(#/.test(svg)) {
+    return null;
+  }
+
+  const maskIdFor = (id: string) => `${id}__as-mask`;
+  let converted = false;
+
+  let output = svg.replace(CLIP_PATH_DEF_RE, (whole, id: string, body: string) => {
+    if (!definitions.has(id) || !referenced.includes(id)) {
+      return whole;
+    }
+    converted = true;
+    const painted = repaintMaskWhite(body).replace(/\sclip-rule\s*=/g, " fill-rule=");
+    // The mask region is deliberately left at its default (the referencing element's
+    // bounding box, padded): pinning it to the viewBox cuts content that a transform on
+    // the clipped element moves into view, which is how Google's logo is laid out.
+    return `${whole}<mask id="${maskIdFor(id)}">${painted}</mask>`;
+  });
+
+  if (!converted) {
+    return null;
+  }
+
+  output = output.replace(CLIP_PATH_REF_RE, (whole, id: string) =>
+    definitions.has(id) ? ` mask="url(#${maskIdFor(id)})"` : whole,
+  );
+
+  return output;
+};
+
 const XLINK_NS = "http://www.w3.org/1999/xlink";
 const USE_RE = /<use\b([^>]*?)(\/?)>/g;
 
@@ -257,7 +320,9 @@ export const sanitizeForRaycast = (svg: string): string | null => {
   let output = svg;
   let changed = false;
 
-  const declipped = stripFullCanvasClipPaths(output);
+  // Prefer dropping a clip path that changes nothing; fall back to expressing a real crop
+  // as a mask, which keeps the crop instead of leaving the icon blank.
+  const declipped = stripFullCanvasClipPaths(output) ?? convertClipPathsToMasks(output);
   if (declipped !== null) {
     output = declipped;
     changed = true;

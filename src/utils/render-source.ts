@@ -1,15 +1,15 @@
 import { Cache, environment } from "@raycast/api";
 import { createHash } from "crypto";
-import { existsSync, mkdirSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "fs";
 import { writeFile } from "fs/promises";
 import path from "path";
 import { FIVE_MINUTES_MS, ONE_WEEK_MS } from "./cache";
 import { fetchSvg } from "./fetch";
-import { sanitizeForRaycast } from "./sanitize-svg";
+import { SANITIZER_VERSION, sanitizeForRaycast } from "./sanitize-svg";
 
 /**
- * Raycast cannot render `clip-path="url(#…)"`, so those icons come out blank when the
- * remote URL is handed straight to `Image.Source`. For the icons that need it we write a
+ * Several SVG constructs render as a blank tile when the remote URL is handed straight to
+ * Raycast's `Image.Source` (see sanitize-svg). For the icons that need it we write a
  * sanitised copy to disk and point Raycast at that file instead.
  *
  * The decision (sanitised file, or "the original source is fine") is kept in Raycast's
@@ -17,7 +17,10 @@ import { sanitizeForRaycast } from "./sanitize-svg";
  */
 
 const cache = new Cache();
-const cacheKey = (url: string) => `svgl_render_${url}`;
+// The version is part of the key: when the rewrites change, every previous decision —
+// including "this one needs no rewrite" — has to be reconsidered rather than served
+// from a week-old cache entry.
+const cacheKey = (url: string) => `svgl_render_v${SANITIZER_VERSION}_${url}`;
 
 const isLocalPath = (route: string) => route.startsWith("/");
 
@@ -25,7 +28,27 @@ const isLocalPath = (route: string) => route.startsWith("/");
 const ttlFor = (url: string) => (isLocalPath(url) ? FIVE_MINUTES_MS : ONE_WEEK_MS);
 
 const renderDir = path.join(environment.supportPath, "render-cache");
-const sanitizedPathFor = (url: string) => path.join(renderDir, `${createHash("sha1").update(url).digest("hex")}.svg`);
+const versionMarker = path.join(renderDir, ".version");
+const sanitizedPathFor = (url: string) =>
+  path.join(renderDir, `${createHash("sha1").update(`v${SANITIZER_VERSION}:${url}`).digest("hex")}.svg`);
+
+/** Clears sanitised copies left behind by an older version of the rewrites. */
+const ensureRenderDir = () => {
+  mkdirSync(renderDir, { recursive: true });
+  try {
+    if (readFileSync(versionMarker, "utf-8") === String(SANITIZER_VERSION)) {
+      return;
+    }
+  } catch {
+    // No marker yet: fall through and (re)initialise the directory.
+  }
+  for (const entry of readdirSync(renderDir)) {
+    if (entry.endsWith(".svg")) {
+      rmSync(path.join(renderDir, entry), { force: true });
+    }
+  }
+  writeFileSync(versionMarker, String(SANITIZER_VERSION), "utf-8");
+};
 
 interface CachedDecision {
   /** Path to the sanitised copy, or null when the original source renders correctly. */
@@ -99,7 +122,7 @@ export const resolveRenderSource = async (url: string): Promise<string> => {
         const svg = await fetchSvg(url);
         const sanitized = sanitizeForRaycast(svg);
         if (sanitized !== null) {
-          mkdirSync(renderDir, { recursive: true });
+          ensureRenderDir();
           const target = sanitizedPathFor(url);
           await writeFile(target, sanitized, "utf-8");
           file = target;
