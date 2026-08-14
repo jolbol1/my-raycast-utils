@@ -5,7 +5,7 @@ import { writeFile } from "fs/promises";
 import os from "os";
 import path from "path";
 import { FIVE_MINUTES_MS, ONE_WEEK_MS } from "./cache";
-import { fetchSvg } from "./fetch";
+import { fetchSvgSource } from "./fetch";
 import { isResvgMissing, rasterize } from "./resvg";
 
 /**
@@ -21,7 +21,7 @@ import { isResvgMissing, rasterize } from "./resvg";
  */
 
 /** Bumped when rasterisation changes, so output cached by older logic is discarded. */
-const RENDER_VERSION = 3;
+const RENDER_VERSION = 4;
 
 /** Thumbnail width. The grid shows icons small; this stays sharp on retina displays. */
 const RENDER_WIDTH = 256;
@@ -168,7 +168,7 @@ export const resolveRenderSource = async (url: string): Promise<string> => {
 
       try {
         ensureRenderDir();
-        file = await renderToPng(await fetchSvg(url));
+        file = await renderToPng(await fetchSvgSource(url));
       } catch {
         // Unreachable icon, unreadable file, or no resvg: fall back to the original
         // source, which is what Raycast would have been given anyway.

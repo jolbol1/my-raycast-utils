@@ -53,26 +53,34 @@ export const fetchCategories = async () => {
   });
 };
 
-export const fetchSvg = async (url: string) => {
+/**
+ * The SVG exactly as published. Rendering uses this: id prefixing only matters when
+ * several SVGs share one document, and rewriting ids can only risk breaking the artwork.
+ */
+export const fetchSvgSource = async (url: string) => {
   // Local icons live on disk and are never cached — reading them is cheap and
   // caching would serve stale content after the file is edited.
   if (isLocalPath(url)) {
-    const svg = await readFile(url, "utf-8");
-    return prefixSvgIds(svg, getPrefixFromSvgUrl(url));
+    return readFile(url, "utf-8");
   }
 
   return withCache(
-    `svgl_svg_${url}`,
+    `svgl_svg_source_${url}`,
     async () => {
       const res = await fetch(url);
       if (!res.ok) {
         throw new Error(`Error ${res.status}, please try again later.`);
       }
-      const svg = await res.text();
-      return prefixSvgIds(svg, getPrefixFromSvgUrl(url));
+      return res.text();
     },
     ONE_WEEK_MS,
   );
+};
+
+/** The SVG with its ids namespaced, for copying into a document alongside others. */
+export const fetchSvg = async (url: string) => {
+  const svg = await fetchSvgSource(url);
+  return prefixSvgIds(svg, getPrefixFromSvgUrl(url));
 };
 
 const fetchReactComponent = async (url: string, name: string, tsx: boolean) => {
@@ -145,7 +153,7 @@ export const convertSvgToPng = async (url: string, outputPath: string, scale: nu
   if (isLocalPath(url)) {
     svgPath = url;
   } else {
-    const svg = await fetchSvg(url);
+    const svg = await fetchSvgSource(url);
     svgPath = path.join(os.tmpdir(), `${path.basename(outputPath, ".png")}-temp.svg`);
     await writeFile(svgPath, svg, "utf-8");
   }
