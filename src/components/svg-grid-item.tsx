@@ -1,7 +1,8 @@
 import { Action, ActionPanel, Grid, Icon } from "@raycast/api";
 import { Svg } from "../type";
 import { fetchAndCopyPng } from "../utils/fetch";
-import { defaultRoute, routeVariants } from "../utils/svg-route";
+import { useRenderSource } from "../hooks/use-render-source";
+import { defaultRoute } from "../utils/svg-route";
 import { useSvglExtension } from "./app-context";
 import SvgAction from "./svg-action";
 import SvgDetail from "./svg-detail";
@@ -14,7 +15,7 @@ interface SvgGridItemProps {
 
 const SvgGridItem = ({ svg, id }: SvgGridItemProps) => {
   const { addRecentSvgId } = useSvglExtension();
-  const { light, dark } = routeVariants(svg.route);
+  const { light, dark } = useRenderSource(svg.route);
 
   return (
     <Grid.Item

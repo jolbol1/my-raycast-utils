@@ -3,6 +3,7 @@ import { Svg } from "../type";
 import { fetchAndCopyPng } from "../utils/fetch";
 import { preferredScaleOrder } from "../utils/png-scales";
 import { hasLightDarkVariants } from "../utils/svg-route";
+import { useRenderSource } from "../hooks/use-render-source";
 import { useSvglExtension } from "./app-context";
 import SvgAction from "./svg-action";
 
@@ -35,8 +36,44 @@ const buildVariants = (svg: Svg): Variant[] => {
   return variants;
 };
 
-export default function SvgDetail({ svg }: SvgDetailProps) {
+interface VariantGridItemProps {
+  svg: Svg;
+  variant: Variant;
+  scales: number[];
+}
+
+const VariantGridItem = ({ svg, variant, scales }: VariantGridItemProps) => {
   const { addRecentSvgId } = useSvglExtension();
+  // A variant is always a single route, so both resolved sources are the same file.
+  const { light } = useRenderSource(variant.route);
+
+  return (
+    <Grid.Item
+      content={{ value: { source: light }, tooltip: variant.title }}
+      title={variant.title}
+      actions={
+        <ActionPanel>
+          <ActionPanel.Section title="Copy PNG">
+            {scales.map((scale) => (
+              <Action
+                key={scale}
+                icon={Icon.Image}
+                title={`Copy ${scale}x PNG`}
+                onAction={() => {
+                  addRecentSvgId(svg.id);
+                  fetchAndCopyPng(variant.route, `${svg.title}-${variant.title}`, scale);
+                }}
+              />
+            ))}
+          </ActionPanel.Section>
+          <SvgAction svg={svg} />
+        </ActionPanel>
+      }
+    />
+  );
+};
+
+export default function SvgDetail({ svg }: SvgDetailProps) {
   const preferences = getPreferenceValues<Preferences.Index>();
   const scales = preferredScaleOrder(preferences.defaultPngScale);
 
@@ -51,32 +88,7 @@ export default function SvgDetail({ svg }: SvgDetailProps) {
     >
       <Grid.Section title={svg.title} subtitle={`${variants.length} variant${variants.length > 1 ? "s" : ""}`}>
         {variants.map((variant) => (
-          <Grid.Item
-            key={variant.title}
-            content={{
-              value: { source: variant.route },
-              tooltip: variant.title,
-            }}
-            title={variant.title}
-            actions={
-              <ActionPanel>
-                <ActionPanel.Section title="Copy PNG">
-                  {scales.map((scale) => (
-                    <Action
-                      key={scale}
-                      icon={Icon.Image}
-                      title={`Copy ${scale}x PNG`}
-                      onAction={() => {
-                        addRecentSvgId(svg.id);
-                        fetchAndCopyPng(variant.route, `${svg.title}-${variant.title}`, scale);
-                      }}
-                    />
-                  ))}
-                </ActionPanel.Section>
-                <SvgAction svg={svg} />
-              </ActionPanel>
-            }
-          />
+          <VariantGridItem key={variant.title} svg={svg} variant={variant} scales={scales} />
         ))}
       </Grid.Section>
     </Grid>
