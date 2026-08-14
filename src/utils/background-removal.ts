@@ -1,27 +1,17 @@
 import { environment, getPreferenceValues, Clipboard, getSelectedFinderItems } from "@raycast/api";
-import { exec } from "child_process";
+import { execa } from "execa";
 import { chmod, readFile, writeFile } from "fs/promises";
-import { join } from "path";
+import { basename, extname, join } from "path";
 import { tmpdir } from "os";
 import { fal } from "@fal-ai/client";
 
-interface Preferences {
-  falApiKey?: string;
-  defaultModel?: string;
-}
-
-let _tempFilePath: string;
-
-export function getTempFilePath(): string {
-  if (_tempFilePath) {
-    return _tempFilePath;
-  }
-
-  const tempDir = tmpdir();
-  const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-  _tempFilePath = join(tempDir, `remove-bg-${uniqueSuffix}.png`);
-
-  return _tempFilePath;
+/**
+ * A unique temp path per call — a memoised one would make two files copied from
+ * the clipboard in the same session overwrite each other.
+ */
+export function getTempFilePath(extension = ".png"): string {
+  const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+  return join(tmpdir(), `remove-bg-${uniqueSuffix}${extension}`);
 }
 
 export async function storeClipboardFileAsTemporaryFile(fileUrl: string) {
@@ -29,7 +19,10 @@ export async function storeClipboardFileAsTemporaryFile(fileUrl: string) {
     const sourcePath = decodeURI(fileUrl.replace("file://", ""));
     const fileData = await readFile(sourcePath);
 
-    const tempFilePath = getTempFilePath();
+    // Keep the original extension so downstream tools (rsvg-convert, ffmpeg)
+    // still see the right file type.
+    const extension = extname(sourcePath) || ".png";
+    const tempFilePath = getTempFilePath(extension);
 
     await writeFile(tempFilePath, fileData);
 
@@ -44,17 +37,18 @@ export async function storeClipboardFileAsTemporaryFile(fileUrl: string) {
 export async function runBackgroundRemoval({ paths }: { paths: string[] }) {
   const command = join(environment.assetsPath, "remove-background");
   await chmod(command, "755");
-  const output = await new Promise<string>((resolve, reject) => {
-    exec(`${command} ${paths.map((x) => JSON.stringify(x)).join(" ")}`, (err, stdout, stderr) => {
-      if (err) {
-        reject(stdout + " " + stderr);
-      }
-      resolve(stdout);
-    });
-  });
-
-  return output;
+  const { stdout } = await execa(command, paths);
+  return stdout;
 }
+
+const MIME_TYPES: Record<string, string> = {
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".bmp": "image/bmp",
+  ".webp": "image/webp",
+};
 
 export async function getSourceImagePaths(): Promise<{ paths: string[]; isFinderFile: boolean } | null> {
   // Try Finder files first
@@ -62,16 +56,15 @@ export async function getSourceImagePaths(): Promise<{ paths: string[]; isFinder
     const selectedFiles = await getSelectedFinderItems();
     if (selectedFiles && selectedFiles.length > 0) {
       // Filter for image files only
-      const imageExtensions = [".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp"];
       const imagePaths = selectedFiles
-        .filter((file) => imageExtensions.some((ext) => file.path.toLowerCase().endsWith(ext)))
+        .filter((file) => extname(file.path).toLowerCase() in MIME_TYPES)
         .map((file) => file.path);
 
       if (imagePaths.length > 0) {
         return { paths: imagePaths, isFinderFile: true };
       }
     }
-  } catch (error) {
+  } catch {
     // No Finder selection or error getting it, continue to clipboard
   }
 
@@ -90,12 +83,8 @@ export async function getSourceImagePaths(): Promise<{ paths: string[]; isFinder
   return null;
 }
 
-export async function removeBackgroundWithFal(
-  imagePath: string,
-  outputPath?: string,
-  model?: string,
-): Promise<string> {
-  const preferences = getPreferenceValues<Preferences>();
+export async function removeBackgroundWithFal(imagePath: string, outputPath?: string, model?: string): Promise<string> {
+  const preferences = getPreferenceValues<Preferences.RemoveBackground>();
 
   if (!preferences.falApiKey) {
     throw new Error("FAL API key not configured");
@@ -108,8 +97,8 @@ export async function removeBackgroundWithFal(
 
   // Upload image to fal storage
   const imageBuffer = await readFile(imagePath);
-  const fileName = imagePath.split("/").pop() || "image.png";
-  const mimeType = imagePath.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg";
+  const fileName = basename(imagePath) || "image.png";
+  const mimeType = MIME_TYPES[extname(imagePath).toLowerCase()] ?? "image/jpeg";
   const file = new File([imageBuffer], fileName, { type: mimeType });
   const uploadedUrl = await fal.storage.upload(file);
   console.log("Uploaded image URL:", uploadedUrl);
@@ -143,13 +132,10 @@ export async function removeBackgroundWithFal(
   const resultBuffer = Buffer.from(await response.arrayBuffer());
 
   // Save to specified path or temporary file
-  if (!outputPath) {
-    const tempDir = tmpdir();
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    outputPath = join(tempDir, `bg-removed-${uniqueSuffix}.png`);
-  }
+  const resolvedOutputPath =
+    outputPath ?? join(tmpdir(), `bg-removed-${Date.now()}-${Math.round(Math.random() * 1e9)}.png`);
 
-  await writeFile(outputPath, resultBuffer);
+  await writeFile(resolvedOutputPath, resultBuffer);
 
   // Clean up uploaded file from fal storage AFTER downloading result
   try {
@@ -169,7 +155,7 @@ export async function removeBackgroundWithFal(
     // Don't throw - we still want to return the result
   }
 
-  return outputPath;
+  return resolvedOutputPath;
 }
 
 export async function removeBackgroundOffline(imagePath: string): Promise<string> {

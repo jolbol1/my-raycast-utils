@@ -20,15 +20,15 @@ export async function getSourceSvgPath(): Promise<{ path: string; isFinderFile: 
         return { path: svgPaths[0], isFinderFile: true };
       } else {
         // Files were selected but none are SVG
-        const fileExtensions = allFilePaths.map(p => path.extname(p).toLowerCase()).join(", ");
-        return { 
-          path: "", 
-          isFinderFile: false, 
-          error: `Selected files are not SVG format. Found: ${fileExtensions}. Please select an SVG file.` 
+        const fileExtensions = allFilePaths.map((p) => path.extname(p).toLowerCase()).join(", ");
+        return {
+          path: "",
+          isFinderFile: false,
+          error: `Selected files are not SVG format. Found: ${fileExtensions}. Please select an SVG file.`,
         };
       }
     }
-  } catch (error) {
+  } catch {
     // No Finder selection or error getting it, continue to clipboard
   }
 
@@ -37,17 +37,17 @@ export async function getSourceSvgPath(): Promise<{ path: string; isFinderFile: 
     const clipboardContent = await Clipboard.read();
     if (clipboardContent.file) {
       // Check if clipboard file is SVG
-      const fileName = clipboardContent.file.split('/').pop() || '';
+      const fileName = clipboardContent.file.split("/").pop() || "";
       const isSvg = SVG_EXTENSIONS.some((ext) => fileName.toLowerCase().endsWith(ext));
-      
+
       if (!isSvg) {
-        return { 
-          path: "", 
-          isFinderFile: false, 
-          error: `Clipboard file is not an SVG. File: ${fileName}. Please copy an SVG file.` 
+        return {
+          path: "",
+          isFinderFile: false,
+          error: `Clipboard file is not an SVG. File: ${fileName}. Please copy an SVG file.`,
         };
       }
-      
+
       // If clipboard has a file, store it as temporary file
       const tempPath = await storeClipboardFileAsTemporaryFile(clipboardContent.file);
       return { path: tempPath, isFinderFile: false };

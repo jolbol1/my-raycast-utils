@@ -1,0 +1,43 @@
+import { Action, ActionPanel, Grid, Icon } from "@raycast/api";
+import { Svg } from "../type";
+import { fetchAndCopyPng } from "../utils/fetch";
+import { defaultRoute, routeVariants } from "../utils/svg-route";
+import { useSvglExtension } from "./app-context";
+import SvgAction from "./svg-action";
+import SvgDetail from "./svg-detail";
+
+interface SvgGridItemProps {
+  svg: Svg;
+  /** Optional stable item id, used to keep focus when reordering pinned items. */
+  id?: string;
+}
+
+const SvgGridItem = ({ svg, id }: SvgGridItemProps) => {
+  const { addRecentSvgId } = useSvglExtension();
+  const { light, dark } = routeVariants(svg.route);
+
+  return (
+    <Grid.Item
+      id={id}
+      content={{ value: { source: { light, dark } }, tooltip: svg.title }}
+      title={svg.title}
+      actions={
+        <ActionPanel>
+          <Action.Push icon={Icon.Eye} title="View Details" target={<SvgDetail svg={svg} />} />
+          <Action
+            icon={Icon.Image}
+            title="Copy 4X PNG"
+            shortcut={{ modifiers: ["cmd"], key: "return" }}
+            onAction={() => {
+              addRecentSvgId(svg.id);
+              fetchAndCopyPng(defaultRoute(svg.route), svg.title, 4);
+            }}
+          />
+          <SvgAction svg={svg} />
+        </ActionPanel>
+      }
+    />
+  );
+};
+
+export default SvgGridItem;

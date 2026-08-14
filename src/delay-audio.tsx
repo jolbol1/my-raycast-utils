@@ -2,11 +2,7 @@ import { showToast, Toast, closeMainWindow, LaunchProps } from "@raycast/api";
 import { getSourceMediaPath } from "./utils/video-selection";
 import { runDotfileScript } from "./utils/script-runner";
 
-interface Arguments {
-  delay?: string;
-}
-
-export default async function Command(props: LaunchProps<{ arguments: Arguments }>) {
+export default async function Command(props: LaunchProps<{ arguments: Arguments.DelayAudio }>) {
   await closeMainWindow({ clearRootSearch: true });
 
   const toast = await showToast({

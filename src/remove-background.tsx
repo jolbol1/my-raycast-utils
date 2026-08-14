@@ -7,26 +7,12 @@ import {
   confirmAlert,
   LaunchProps,
 } from "@raycast/api";
-import {
-  getSourceImagePaths,
-  removeBackgroundWithFal,
-  removeBackgroundOffline,
-} from "./utils/background-removal";
+import { getSourceImagePaths, removeBackgroundWithFal, removeBackgroundOffline } from "./utils/background-removal";
 
-interface Preferences {
-  falApiKey?: string;
-  defaultModel?: string;
-}
-
-interface Arguments {
-  model?: string;
-  customModel?: string;
-}
-
-export default async function Command(props: LaunchProps<{ arguments: Arguments }>) {
+export default async function Command(props: LaunchProps<{ arguments: Arguments.RemoveBackground }>) {
   await closeMainWindow({ clearRootSearch: true });
 
-  const preferences = getPreferenceValues<Preferences>();
+  const preferences = getPreferenceValues<Preferences.RemoveBackground>();
   const { model: argModel, customModel } = props.arguments;
 
   const toast = await showToast({

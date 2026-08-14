@@ -8,7 +8,7 @@ export interface Svg {
         dark: string;
         light: string;
       };
-  wordmark:
+  wordmark?:
     | string
     | {
         dark: string;
@@ -23,9 +23,4 @@ export interface Category {
   total: number;
 }
 
-export type SvgActionKey =
-  | "copySvg"
-  | "copySvgFile"
-  | "copySvgWordmark"
-  | "copyPng"
-  | "operation"
+export type SvgActionKey = "copySvg" | "copySvgFile" | "copySvgWordmark" | "copyPng" | "operation";

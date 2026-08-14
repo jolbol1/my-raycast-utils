@@ -1,4 +1,5 @@
 import { ActionPanel, getPreferenceValues } from "@raycast/api";
+import { ReactElement } from "react";
 import CopySvgActions from "./actions/copy-svg-actions";
 import CopySvgFileActions from "./actions/copy-svg-file-actions";
 import CopyWordmarkSvgActions from "./actions/copy-wordmark-svg-actions";
@@ -8,14 +9,13 @@ import CopyPngActions from "./actions/copy-png-actions";
 
 interface SvgActionProps {
   svg: Svg;
-  category: string;
 }
 
-const SvgAction = ({ svg, category }: SvgActionProps) => {
+const SvgAction = ({ svg }: SvgActionProps) => {
   const preferences = getPreferenceValues<Preferences.Index>();
   const { svgDefaultAction } = preferences;
 
-  const actionSections: Record<SvgActionKey, JSX.Element> = {
+  const actionSections: Record<SvgActionKey, ReactElement> = {
     copySvg: (
       <ActionPanel.Section title="Copy SVG" key="copySvg">
         <CopySvgActions svg={svg} />

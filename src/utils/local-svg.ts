@@ -38,12 +38,17 @@ export const getRecentSvgIds = async () => {
   return recentSvgIdsStr ? JSON.parse(recentSvgIdsStr) : [];
 };
 
+/** Only a handful are ever shown, so the stored list is capped to stop it growing forever. */
+const MAX_STORED_RECENT_SVG_IDS = 50;
+
 export const addRecentSvgIdToLocal = async (id: number) => {
   const recentSvgIdsStr = await LocalStorage.getItem<string>("recentSvgIds");
   const recentSvgIds = recentSvgIdsStr ? JSON.parse(recentSvgIdsStr) : [];
 
-  const newRecentSvgIds = recentSvgIds.filter((recentId: number) => recentId !== id);
-  newRecentSvgIds.unshift(id);
+  const newRecentSvgIds = [id, ...recentSvgIds.filter((recentId: number) => recentId !== id)].slice(
+    0,
+    MAX_STORED_RECENT_SVG_IDS,
+  );
 
   await LocalStorage.setItem("recentSvgIds", JSON.stringify(newRecentSvgIds));
 };

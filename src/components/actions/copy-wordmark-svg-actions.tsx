@@ -1,6 +1,7 @@
 import { Action, Icon } from "@raycast/api";
 import { Svg } from "../../type";
 import { fetchAndCopySvg } from "../../utils/fetch";
+import { hasLightDarkVariants } from "../../utils/svg-route";
 import { useSvglExtension } from "../app-context";
 
 const CopyWordmarkSvgAction = ({ svg }: { svg: Svg }) => {
@@ -11,53 +12,40 @@ const CopyWordmarkSvgAction = ({ svg }: { svg: Svg }) => {
     fetchAndCopySvg(url, showContent);
   };
 
-  if (typeof svg.wordmark === "string") {
+  if (!svg.wordmark) {
+    return null;
+  }
+
+  if (!hasLightDarkVariants(svg.wordmark)) {
+    const wordmark = svg.wordmark;
     return (
       <Action
         icon={Icon.Clipboard}
         title="Copy SVG Wordmark File"
-        onAction={() => handleAction(svg.wordmark as string, "Copied SVG Wordmark to clipboard")}
+        onAction={() => handleAction(wordmark, "Copied SVG Wordmark to clipboard")}
       />
     );
   }
 
-  if (svg.wordmark !== undefined) {
-    return (
-      <>
-        <Action
-          icon={Icon.Clipboard}
-          title="Copy Light SVG Wordmark File"
-          shortcut={{
-            modifiers: ["cmd", "shift"],
-            key: "l",
-          }}
-          onAction={() =>
-            handleAction(
-              typeof svg.wordmark === "string" ? svg.wordmark : svg.wordmark?.light,
-              "Copied Light SVG Wordmark to clipboard",
-            )
-          }
-        />
+  const { light, dark } = svg.wordmark;
 
-        <Action
-          icon={Icon.Clipboard}
-          title="Copy Dark SVG Wordmark File"
-          shortcut={{
-            modifiers: ["cmd", "shift"],
-            key: "d",
-          }}
-          onAction={() =>
-            handleAction(
-              typeof svg.wordmark === "string" ? svg.wordmark : svg.wordmark?.dark,
-              "Copied Dark SVG Wordmark to clipboard",
-            )
-          }
-        />
-      </>
-    );
-  }
+  return (
+    <>
+      <Action
+        icon={Icon.Clipboard}
+        title="Copy Light SVG Wordmark File"
+        shortcut={{ modifiers: ["cmd", "shift"], key: "l" }}
+        onAction={() => handleAction(light, "Copied Light SVG Wordmark to clipboard")}
+      />
 
-  return null;
+      <Action
+        icon={Icon.Clipboard}
+        title="Copy Dark SVG Wordmark File"
+        shortcut={{ modifiers: ["cmd", "shift"], key: "d" }}
+        onAction={() => handleAction(dark, "Copied Dark SVG Wordmark to clipboard")}
+      />
+    </>
+  );
 };
 
 export default CopyWordmarkSvgAction;

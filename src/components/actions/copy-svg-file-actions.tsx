@@ -1,6 +1,7 @@
 import { Action, Icon } from "@raycast/api";
 import { Svg } from "../../type";
 import { fetchAndCopySvgFile } from "../../utils/fetch";
+import { hasLightDarkVariants } from "../../utils/svg-route";
 import { useSvglExtension } from "../app-context";
 
 const CopySvgFileActions = ({ svg }: { svg: Svg }) => {
@@ -11,40 +12,31 @@ const CopySvgFileActions = ({ svg }: { svg: Svg }) => {
     fetchAndCopySvgFile(url, showContent, fileName);
   };
 
-  if (typeof svg.route === "string") {
+  if (!hasLightDarkVariants(svg.route)) {
+    const route = svg.route;
     return (
       <Action
         icon={Icon.Clipboard}
         title="Copy SVG File"
-        onAction={() => handleAction(svg.route as string, "Copied SVG file to clipboard", svg.title)}
+        onAction={() => handleAction(route, "Copied SVG file to clipboard", svg.title)}
       />
     );
   }
+
+  const { light, dark } = svg.route;
 
   return (
     <>
       <Action
         icon={Icon.Clipboard}
         title="Copy Light SVG File"
-        onAction={() =>
-          handleAction(
-            typeof svg.route === "string" ? svg.route : svg.route.light,
-            "Copied Light SVG file to clipboard",
-            `${svg.title}-light`,
-          )
-        }
+        onAction={() => handleAction(light, "Copied Light SVG file to clipboard", `${svg.title}-light`)}
       />
 
       <Action
         icon={Icon.Clipboard}
         title="Copy Dark SVG File"
-        onAction={() =>
-          handleAction(
-            typeof svg.route === "string" ? svg.route : svg.route.dark,
-            "Copied Dark SVG file to clipboard",
-            `${svg.title}-dark`,
-          )
-        }
+        onAction={() => handleAction(dark, "Copied Dark SVG file to clipboard", `${svg.title}-dark`)}
       />
     </>
   );

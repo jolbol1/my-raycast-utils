@@ -4,7 +4,7 @@ import { usePinSvg } from "../hooks/use-pin-svg";
 import { useRecentSvg } from "../hooks/use-recent-svg";
 import { Category, Svg } from "../type";
 import { fetchCategories, fetchSvgs } from "../utils/fetch";
-import { loadLocalSvgs } from "../utils/local-icons";
+import { LOCAL_CATEGORY, loadLocalSvgs } from "../utils/local-icons";
 
 interface AppContextProps {
   svgs: Svg[];
@@ -70,24 +70,30 @@ export const SvglExtensionProvider = ({ children }: { children: React.ReactNode 
 
     async function fetchData() {
       setIsAPILoading(true);
+
+      // Local icons are loaded first and independently of the network, so a
+      // failing/slow svgl.app request never hides them.
+      const preferences = getPreferenceValues<Preferences.Index>();
+      const { svgs: localSvgs, error: localError } = loadLocalSvgs(preferences.localIconsPath);
+      const localCategories: Category[] =
+        localSvgs.length > 0 ? [{ category: LOCAL_CATEGORY, total: localSvgs.length }] : [];
+
+      setSvgs(localSvgs);
+      setCategories(localCategories);
+
+      if (localError && preferences.localIconsPath) {
+        await showToast({
+          style: Toast.Style.Failure,
+          title: "Local icons not loaded",
+          message: localError,
+        });
+      }
+
       try {
-        const apiSvgs = await fetchSvgs();
-        const apiCategories = await fetchCategories();
+        const [apiSvgs, apiCategories] = await Promise.all([fetchSvgs(), fetchCategories()]);
 
-        // Load local SVGs
-        const preferences = getPreferenceValues<Preferences.Index>();
-        const localSvgs = loadLocalSvgs(preferences.localIconsPath);
-
-        // Merge API and local SVGs
-        const allSvgs = [...apiSvgs, ...localSvgs];
-
-        // Add Custom category if there are local SVGs
-        const allCategories = localSvgs.length > 0
-          ? [...apiCategories, { category: "Custom", total: localSvgs.length }]
-          : apiCategories;
-
-        setSvgs(allSvgs);
-        setCategories(allCategories);
+        setSvgs([...apiSvgs, ...localSvgs]);
+        setCategories([...apiCategories, ...localCategories]);
       } catch (error) {
         if (error instanceof Error) {
           await showToast({

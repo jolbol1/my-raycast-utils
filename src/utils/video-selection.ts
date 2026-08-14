@@ -40,7 +40,7 @@ export async function getSourceMediaPath(): Promise<{ path: string; isFinderFile
         return { path: mediaPaths[0], isFinderFile: true };
       }
     }
-  } catch (error) {
+  } catch {
     // No Finder selection or error getting it, continue to clipboard
   }
 

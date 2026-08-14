@@ -1,12 +1,11 @@
 import { Clipboard, Toast, closeMainWindow, showHUD, showToast } from "@raycast/api";
-import fetch from "node-fetch";
+import { execa } from "execa";
+import { readFile, writeFile } from "fs/promises";
+import os from "os";
+import path from "path";
 import { Category, Svg } from "../type";
 import { ONE_WEEK_MS, withCache } from "./cache";
-import { readFileSync, writeFileSync } from "fs";
-import path from "path";
-import os from "os";
 import { getPrefixFromSvgUrl, prefixSvgIds } from "./prefix-svg";
-import { execa } from "execa";
 
 export const APP_URL = "https://svgl.app";
 export const API_URL = "https://api.svgl.app";
@@ -16,6 +15,23 @@ export const OLD_API_URL = `${APP_URL}/api`;
 interface SvrgApiResponse {
   data: string;
 }
+
+const isLocalPath = (route: string) => route.startsWith("/");
+
+/** Wraps an action with an animated toast, turning failures into a failure toast. */
+const withToast = async (title: string, failureTitle: string, action: () => Promise<void>) => {
+  const toast = await showToast({ style: Toast.Style.Animated, title });
+  try {
+    await action();
+    await toast.hide();
+  } catch (error) {
+    await showToast({
+      style: Toast.Style.Failure,
+      title: failureTitle,
+      message: error instanceof Error ? error.message : undefined,
+    });
+  }
+};
 
 export const fetchSvgs = async () => {
   return withCache("svgl_svgs", async () => {
@@ -38,9 +54,10 @@ export const fetchCategories = async () => {
 };
 
 export const fetchSvg = async (url: string) => {
-  // Handle local file paths (absolute paths starting with /)
-  if (url.startsWith("/")) {
-    const svg = readFileSync(url, "utf-8");
+  // Local icons live on disk and are never cached — reading them is cheap and
+  // caching would serve stale content after the file is edited.
+  if (isLocalPath(url)) {
+    const svg = await readFile(url, "utf-8");
     return prefixSvgIds(svg, getPrefixFromSvgUrl(url));
   }
 
@@ -48,6 +65,9 @@ export const fetchSvg = async (url: string) => {
     `svgl_svg_${url}`,
     async () => {
       const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error(`Error ${res.status}, please try again later.`);
+      }
       const svg = await res.text();
       return prefixSvgIds(svg, getPrefixFromSvgUrl(url));
     },
@@ -80,98 +100,39 @@ const fetchReactComponent = async (url: string, name: string, tsx: boolean) => {
 };
 
 export const fetchAndCopySvg = async (url: string, showContent: string) => {
-  const toast = await showToast({
-    style: Toast.Style.Animated,
-    title: "Fetching svg file",
-  });
-  try {
+  await withToast("Fetching svg file", "Failed to fetch svg", async () => {
     const svg = await fetchSvg(url);
-    await toast.hide();
-    Clipboard.copy(svg);
-    showHUD(showContent);
-    closeMainWindow();
-  } catch (error) {
-    if (error instanceof Error) {
-      await showToast({
-        style: Toast.Style.Failure,
-        title: "Failed to fetch svg",
-        message: error.message,
-      });
-    } else {
-      await showToast({
-        style: Toast.Style.Failure,
-        title: "Failed to fetch svg",
-      });
-    }
-  }
+    await Clipboard.copy(svg);
+    await showHUD(showContent);
+    await closeMainWindow();
+  });
 };
 
 export const fetchAndCopySvgFile = async (url: string, showContent: string, fileName: string) => {
-  const toast = await showToast({
-    style: Toast.Style.Animated,
-    title: "Fetching svg file",
-  });
-  try {
+  await withToast("Fetching svg file", "Failed to fetch svg", async () => {
     let filePath: string;
 
-    // Handle local file paths
-    if (url.startsWith("/")) {
+    if (isLocalPath(url)) {
       filePath = url;
     } else {
       const svg = await fetchSvg(url);
-      filePath = path.join(os.tmpdir(), `${fileName}.svg`);
-      writeFileSync(filePath, svg, "utf-8");
+      filePath = path.join(os.tmpdir(), `${sanitizeFileName(fileName)}.svg`);
+      await writeFile(filePath, svg, "utf-8");
     }
 
-    await toast.hide();
-    Clipboard.copy({
-      file: filePath,
-    });
-    showHUD(showContent);
-    closeMainWindow();
-  } catch (error) {
-    if (error instanceof Error) {
-      await showToast({
-        style: Toast.Style.Failure,
-        title: "Failed to fetch svg",
-        message: error.message,
-      });
-    } else {
-      await showToast({
-        style: Toast.Style.Failure,
-        title: "Failed to fetch svg",
-      });
-    }
-  }
+    await Clipboard.copy({ file: filePath });
+    await showHUD(showContent);
+    await closeMainWindow();
+  });
 };
 
 export const fetchAndCopyReactComponent = async (url: string, name: string, tsx: boolean) => {
-  const toast = await showToast({
-    style: Toast.Style.Animated,
-    title: "Fetching React component",
-  });
-
-  try {
+  await withToast("Fetching React component", "Failed to fetch react component", async () => {
     const reactComponent = await fetchReactComponent(url, name, tsx);
-    await toast.hide();
-    Clipboard.copy(reactComponent);
-    showHUD(`Copied React component to clipboard`);
-    closeMainWindow();
-  } catch (error) {
-    if (error instanceof Error) {
-      await showToast({
-        style: Toast.Style.Failure,
-        title: "Failed to fetch react component",
-        message: error.message,
-      });
-    } else {
-      await showToast({
-        style: Toast.Style.Failure,
-        title: "Failed to fetch react component",
-      });
-    }
-    return;
-  }
+    await Clipboard.copy(reactComponent);
+    await showHUD("Copied React component to clipboard");
+    await closeMainWindow();
+  });
 };
 
 export const findRsvgConvert = async (): Promise<string> => {
@@ -201,53 +162,36 @@ export const findRsvgConvert = async (): Promise<string> => {
   }
 };
 
-export const fetchAndCopyPng = async (url: string, fileName: string, scale: number) => {
-  const toast = await showToast({
-    style: Toast.Style.Animated,
-    title: `Converting SVG to PNG (${scale}x)`,
-  });
-  try {
-    // Sanitize fileName to avoid issues with special characters
-    const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9-_]/g, "_");
-    const pngPath = path.join(os.tmpdir(), `${sanitizedFileName}-${scale}x.png`);
+/** Keeps generated temp file names free of path separators and shell-hostile characters. */
+export const sanitizeFileName = (fileName: string) => fileName.replace(/[^a-zA-Z0-9-_]/g, "_");
 
-    let svgPath: string;
+/** Rasterises an SVG (local path or remote URL) to a PNG on disk and returns its path. */
+export const convertSvgToPng = async (url: string, outputPath: string, scale: number) => {
+  let svgPath: string;
 
-    // Handle local file paths
-    if (url.startsWith("/")) {
-      svgPath = url;
-    } else {
-      // For remote URLs, fetch and save to temp
-      const svg = await fetchSvg(url);
-      svgPath = path.join(os.tmpdir(), `${sanitizedFileName}-temp.svg`);
-      writeFileSync(svgPath, svg, "utf-8");
-    }
-
-    // Find rsvg-convert binary
-    const rsvgConvertPath = await findRsvgConvert();
-
-    // Use rsvg-convert to scale SVG and convert to PNG
-    // This scales the SVG first, then rasterizes it to PNG
-    await execa(rsvgConvertPath, ["--zoom", scale.toString(), "--output", pngPath, svgPath]);
-
-    await toast.hide();
-    Clipboard.copy({
-      file: pngPath,
-    });
-    showHUD(`Copied ${scale}x PNG to clipboard`);
-    closeMainWindow();
-  } catch (error) {
-    if (error instanceof Error) {
-      await showToast({
-        style: Toast.Style.Failure,
-        title: "Failed to convert to PNG",
-        message: error.message,
-      });
-    } else {
-      await showToast({
-        style: Toast.Style.Failure,
-        title: "Failed to convert to PNG",
-      });
-    }
+  if (isLocalPath(url)) {
+    svgPath = url;
+  } else {
+    const svg = await fetchSvg(url);
+    svgPath = path.join(os.tmpdir(), `${path.basename(outputPath, ".png")}-temp.svg`);
+    await writeFile(svgPath, svg, "utf-8");
   }
+
+  const rsvgConvertPath = await findRsvgConvert();
+
+  // Scale the SVG first, then rasterise it to PNG.
+  await execa(rsvgConvertPath, ["--zoom", scale.toString(), "--output", outputPath, svgPath]);
+
+  return outputPath;
+};
+
+export const fetchAndCopyPng = async (url: string, fileName: string, scale: number) => {
+  await withToast(`Converting SVG to PNG (${scale}x)`, "Failed to convert to PNG", async () => {
+    const pngPath = path.join(os.tmpdir(), `${sanitizeFileName(fileName)}-${scale}x.png`);
+    await convertSvgToPng(url, pngPath, scale);
+
+    await Clipboard.copy({ file: pngPath });
+    await showHUD(`Copied ${scale}x PNG to clipboard`);
+    await closeMainWindow();
+  });
 };

@@ -98,10 +98,10 @@
         {
           "name": "localIconsPath",
           "title": "Local Icons Path",
-          "description": "Path to local icons folder (optional)",
+          "description": "Folder of custom icons. Use a subfolder per icon (light.svg/dark.svg/wordmark-light.svg/wordmark-dark.svg) or flat files (figma.svg, figma-dark.svg, figma-wordmark.svg). ~ is supported.",
           "type": "textfield",
           "required": false,
-          "placeholder": "/Users/username/path/to/icons"
+          "placeholder": "~/Icons"
         },
         {
           "name": "defaultPackageManager",
@@ -282,31 +282,28 @@
     }
   ],
   "dependencies": {
-    "@fal-ai/client": "^1.6.2",
-    "@raycast/api": "^1.93.0",
-    "@raycast/utils": "^1.14.0",
-    "dedent": "^1.5.3",
-    "execa": "^8.0.1",
-    "node-fetch": "^3.3.2"
+    "@fal-ai/client": "^1.10.1",
+    "@raycast/api": "^1.104.24",
+    "execa": "^10.0.1"
   },
   "devDependencies": {
-    "@raycast/eslint-config": "^1.0.6",
-    "@types/node": "20.8.10",
-    "@types/react": "^18.3.3",
-    "eslint": "^8.51.0",
-    "prettier": "^3.0.3",
-    "react-devtools": "^5.2.0",
-    "typescript": "^5.2.2"
+    "@raycast/eslint-config": "^2.2.0",
+    "@types/node": "22.19.17",
+    "@types/react": "19.0.10",
+    "eslint": "^10.8.0",
+    "prettier": "^3.9.6",
+    "react-devtools": "6.1.1",
+    "typescript": "^6.0.3"
   },
   "scripts": {
     "build": "ray build -e dist",
     "dev": "ray develop",
     "fix-lint": "ray lint --fix",
     "lint": "ray lint",
-    "publish": "npx @raycast/api@latest publish"
+    "publish": "pnpm dlx @raycast/api@latest publish"
   },
   "platforms": [
-    "macOS",
-    "Windows"
-  ]
+    "macOS"
+  ],
+  "packageManager": "pnpm@11.21.0"
 }

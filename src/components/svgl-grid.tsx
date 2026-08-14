@@ -37,7 +37,7 @@ export default function SvglGrid() {
         </Grid.Dropdown>
       }
     >
-      {!isLoading && selectCategory === "All" ? (
+      {selectCategory === "All" ? (
         <AllGrid />
       ) : selectCategory === "Pinned" ? (
         <PinnedGrid />

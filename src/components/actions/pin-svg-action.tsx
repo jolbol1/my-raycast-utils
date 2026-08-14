@@ -8,7 +8,7 @@ const PinSvgAction = ({ svg }: { svg: Svg }) => {
     <>
       <Action
         icon={Icon.TackDisabled}
-        title="Unpin Svg"
+        title="Unpin SVG"
         onAction={() => {
           unPinSvg(svg.id, svg.title);
         }}
@@ -21,7 +21,7 @@ const PinSvgAction = ({ svg }: { svg: Svg }) => {
       {pinnedSvgIds.indexOf(svg.id) !== 0 && (
         <Action
           icon={Icon.ArrowUp}
-          title="Move Up in Pinned"
+          title="Move up in Pinned"
           onAction={() => {
             focusGridItem(svg.id, `pinned`);
             moveUpInPinned(svg.id, svg.title);
@@ -51,7 +51,7 @@ const PinSvgAction = ({ svg }: { svg: Svg }) => {
   ) : (
     <Action
       icon={Icon.Tack}
-      title="Pin Svg"
+      title="Pin SVG"
       onAction={() => {
         pinSvg(svg.id, svg.title);
       }}

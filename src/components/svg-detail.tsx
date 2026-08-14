@@ -1,12 +1,13 @@
 import { Action, ActionPanel, Grid, Icon, getPreferenceValues } from "@raycast/api";
 import { Svg } from "../type";
-import { useSvglExtension } from "./app-context";
 import { fetchAndCopyPng } from "../utils/fetch";
+import { preferredScaleOrder } from "../utils/png-scales";
+import { hasLightDarkVariants } from "../utils/svg-route";
+import { useSvglExtension } from "./app-context";
 import SvgAction from "./svg-action";
 
 interface SvgDetailProps {
   svg: Svg;
-  category: string;
 }
 
 interface Variant {
@@ -14,83 +15,65 @@ interface Variant {
   route: string;
 }
 
-export default function SvgDetail({ svg, category }: SvgDetailProps) {
-  const { addRecentSvgId } = useSvglExtension();
-  const preferences = getPreferenceValues<Preferences.Index>();
-  const defaultPngScale = parseInt(preferences.defaultPngScale || "4");
-
+const buildVariants = (svg: Svg): Variant[] => {
   const variants: Variant[] = [];
 
-  // Build variants list
-  const hasLightDarkRoute = typeof svg.route !== "string";
-  const hasLightDarkWordmark = svg.wordmark !== undefined && typeof svg.wordmark !== "string";
-  const hasWordmark = svg.wordmark !== undefined;
-
-  if (hasLightDarkRoute) {
-    // Light and Dark normal
-    variants.push({
-      title: "Light",
-      route: svg.route.light,
-    });
-    variants.push({
-      title: "Dark",
-      route: svg.route.dark,
-    });
+  if (hasLightDarkVariants(svg.route)) {
+    variants.push({ title: "Light", route: svg.route.light });
+    variants.push({ title: "Dark", route: svg.route.dark });
   } else {
-    // Single normal
-    variants.push({
-      title: "Normal",
-      route: svg.route as string,
-    });
+    variants.push({ title: "Normal", route: svg.route });
   }
 
-  // Handle wordmarks separately
-  if (hasLightDarkWordmark) {
-    // Light and Dark wordmark
-    variants.push({
-      title: "Light Wordmark",
-      route: svg.wordmark.light,
-    });
-    variants.push({
-      title: "Dark Wordmark",
-      route: svg.wordmark.dark,
-    });
-  } else if (hasWordmark) {
-    // Single wordmark
-    variants.push({
-      title: "Wordmark",
-      route: svg.wordmark as string,
-    });
+  if (hasLightDarkVariants(svg.wordmark)) {
+    variants.push({ title: "Light Wordmark", route: svg.wordmark.light });
+    variants.push({ title: "Dark Wordmark", route: svg.wordmark.dark });
+  } else if (svg.wordmark) {
+    variants.push({ title: "Wordmark", route: svg.wordmark });
   }
 
-  const allScales = [1, 2, 4, 8, 16, 32, 64];
-  const scales = [defaultPngScale, ...allScales.filter((s) => s !== defaultPngScale)];
+  return variants;
+};
+
+export default function SvgDetail({ svg }: SvgDetailProps) {
+  const { addRecentSvgId } = useSvglExtension();
+  const preferences = getPreferenceValues<Preferences.Index>();
+  const scales = preferredScaleOrder(preferences.defaultPngScale);
+
+  const variants = buildVariants(svg);
 
   return (
-    <Grid inset={Grid.Inset.Medium} columns={4} navigationTitle={`${svg.title} - Variants`} searchBarPlaceholder="Search variants">
+    <Grid
+      inset={Grid.Inset.Medium}
+      columns={4}
+      navigationTitle={`${svg.title} - Variants`}
+      searchBarPlaceholder="Search variants"
+    >
       <Grid.Section title={svg.title} subtitle={`${variants.length} variant${variants.length > 1 ? "s" : ""}`}>
-        {variants.map((variant, index) => (
+        {variants.map((variant) => (
           <Grid.Item
-            key={index}
+            key={variant.title}
             content={{
               value: { source: variant.route },
-              tooltip: variant.title,         
+              tooltip: variant.title,
             }}
             title={variant.title}
             actions={
               <ActionPanel>
-                {scales.map((scale) => (
-                  <Action
-                    key={scale}
-                    icon={Icon.Image}
-                    title={`Copy ${scale}x PNG`}
-                    onAction={() => {
-                      addRecentSvgId(svg.id);
-                      fetchAndCopyPng(variant.route, `${svg.title}-${variant.title}`, scale);
-                    }}
-                  />
-                ))}
-                <SvgAction svg={svg} category={category} />
+                <ActionPanel.Section title="Copy PNG">
+                  {scales.map((scale) => (
+                    <Action
+                      key={scale}
+                      icon={Icon.Image}
+                      title={`Copy ${scale}x PNG`}
+                      onAction={() => {
+                        addRecentSvgId(svg.id);
+                        fetchAndCopyPng(variant.route, `${svg.title}-${variant.title}`, scale);
+                      }}
+                    />
+                  ))}
+                </ActionPanel.Section>
+                <SvgAction svg={svg} />
               </ActionPanel>
             }
           />
