@@ -91,8 +91,10 @@ export const SvglExtensionProvider = ({ children }: { children: React.ReactNode 
     try {
       const [apiSvgs, apiCategories] = await Promise.all([fetchSvgs(), fetchCategories()]);
 
-      setSvgs([...apiSvgs, ...localSvgs]);
-      setCategories([...apiCategories, ...localCategories]);
+      // Local icons come first, so the Custom category is at the top of the
+      // dropdown and its section is the first one in the All grid.
+      setSvgs([...localSvgs, ...apiSvgs]);
+      setCategories([...localCategories, ...apiCategories]);
     } catch (error) {
       if (error instanceof Error) {
         await showToast({
