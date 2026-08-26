@@ -1,7 +1,23 @@
-# My Utils
+# My Raycast Utils
 
-A personal Raycast extension: SVG search (via [svgl](https://svgl.app/) plus your own local icons), SVG→PNG
-conversion, background removal, and a couple of ffmpeg helpers.
+A personal Raycast extension with a set of tools I use every day:
+
+- **Search SVG Icons** — browse [svgl.app](https://svgl.app) and your own local icon folder.
+- **Convert SVG to PNG** — rasterise an SVG from Finder or the clipboard.
+- **Remove Image Background** — online through [fal.ai](https://fal.ai), or offline on-device.
+- **Search Mise Registry** — search the [mise](https://mise.jdx.dev) registry and install tools globally.
+- **Manage Mise Tools** — list, upgrade and remove your global mise tools.
+- **Transcribe Video / Delay Audio** — thin wrappers around my own ffmpeg scripts.
+
+It is published here for reference and for anyone who wants to copy parts of it. It is not on the Raycast
+store, so install it as a local development extension.
+
+## Credits
+
+The SVG search command started as the [svgl Raycast extension](https://www.raycast.com/1weiho/svgl) by
+[**1weiho**](https://github.com/1weiho), with contributions from
+[**ridemountainpig**](https://github.com/ridemountainpig). Everything else was added on top. The project keeps
+the original MIT licence.
 
 ## Requirements
 
@@ -10,6 +26,25 @@ conversion, background removal, and a couple of ffmpeg helpers.
 ```sh
 brew install resvg     # or: mise use -g resvg / cargo install resvg
 ```
+
+The two mise commands need [mise](https://mise.jdx.dev) on disk. It is looked up in `~/.local/bin`,
+`/opt/homebrew/bin`, `/usr/local/bin` and `~/.cargo/bin`, then through your login shell. Set **Mise Binary
+Path** in the extension preferences when it lives somewhere else.
+
+`Transcribe Video` and `Delay Audio` call scripts from my private dotfiles, so they will not work for you
+without changes. See the section below.
+
+## Install
+
+```sh
+git clone <this repo>
+cd my-raycast-utils
+pnpm install
+pnpm dev
+```
+
+`pnpm dev` builds the extension and imports it into Raycast. Stop the process when you are done; the commands
+stay available.
 
 ## Development
 
@@ -69,9 +104,42 @@ the clipboard).
 ### Remove Image Background
 
 Runs on images selected in Finder or on the clipboard, either through [fal.ai](https://fal.ai) (needs an API
-key in preferences) or through the bundled offline binary.
+key in preferences) or on-device.
+
+The offline path runs `assets/remove-background`, a small prebuilt macOS binary that calls Apple's Vision
+framework to cut out the foreground. It is committed to this repo as a universal (arm64 + x86_64) binary
+without its source. If you do not trust a prebuilt binary, delete it and use the fal.ai path instead.
+
+### Search Mise Registry
+
+Searches the [mise registry](https://mise.jdx.dev/registry.html) and shows each tool's **Short** name, its
+**Full** backends, and the **OS** it is limited to, together with the description from your local mise. The
+search matches the short name, aliases, backends and descriptions, in that order of priority.
+
+**⏎** installs the selected tool globally (`mise use -g <tool>`). **⌘⇧I** opens the version list, so a specific
+version can be pinned instead of `latest`. Tools already in the global config are marked and show their
+installed version.
+
+The registry table is read from the docs page and cached for a day; descriptions and aliases come from
+`mise registry --json`, so they are missing when mise cannot be found.
+
+### Manage Mise Tools
+
+Lists the tools in your global mise config, split into **Updates Available** and **Up to Date**. Each tool
+shows its installed version, the version pinned in `~/.config/mise/config.toml`, the latest available version,
+and the backends it came from.
+
+- **⌘U** upgrades the tool.
+- **⌥⌘U** upgrades it and bumps the pinned version in the global config.
+- **⌘⇧U** upgrades every global tool.
+- **⌃X** removes the tool from the global config and deletes every installed version.
 
 ### Transcribe Video / Delay Audio
 
-Thin wrappers around `~/.dotfiles/scripts/transcribe.sh` and `~/.dotfiles/scripts/delay-audio.sh`; those
-scripts need to exist locally.
+Thin wrappers around `~/.dotfiles/scripts/transcribe.sh` and `~/.dotfiles/scripts/delay-audio.sh`. Those
+scripts are not in this repo. To use these two commands, write your own scripts at those paths, or change
+`SCRIPTS_DIR` in `src/utils/script-runner.ts`.
+
+## Licence
+
+MIT. See `package.json`.
