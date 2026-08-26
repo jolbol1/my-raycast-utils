@@ -1,4 +1,4 @@
-# svgl Changelog
+# My Raycast Utils Changelog
 
 ## [Add Mise Registry Search and Tool Management] - 2026-08-26
 

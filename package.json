@@ -1,7 +1,7 @@
 {
   "$schema": "https://www.raycast.com/schemas/extension.json",
-  "name": "my-utils",
-  "title": "My Utils",
+  "name": "my-raycast-utils",
+  "title": "My Raycast Utils",
   "description": "My custom utilities",
   "icon": "command-icon.png",
   "author": "1weiho",
