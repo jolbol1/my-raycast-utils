@@ -279,6 +279,44 @@
           ]
         }
       ]
+    },
+    {
+      "name": "mise-registry",
+      "title": "Search Mise Registry",
+      "description": "Search the mise registry and install tools globally with mise use -g",
+      "mode": "view",
+      "keywords": [
+        "mise",
+        "registry",
+        "tool",
+        "install",
+        "version",
+        "runtime"
+      ]
+    },
+    {
+      "name": "mise-tools",
+      "title": "Manage Mise Tools",
+      "description": "List, upgrade and remove your globally installed mise tools",
+      "mode": "view",
+      "keywords": [
+        "mise",
+        "tools",
+        "global",
+        "upgrade",
+        "outdated",
+        "uninstall"
+      ]
+    }
+  ],
+  "preferences": [
+    {
+      "name": "misePath",
+      "title": "Mise Binary Path",
+      "description": "Path to the mise binary. Leave empty to detect it automatically.",
+      "type": "textfield",
+      "required": false,
+      "placeholder": "/opt/homebrew/bin/mise"
     }
   ],
   "dependencies": {

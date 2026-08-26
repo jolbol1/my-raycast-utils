@@ -1,5 +1,13 @@
 # svgl Changelog
 
+## [Add Mise Registry Search and Tool Management] - 2026-08-26
+
+- Add the command `Search Mise Registry` to search https://mise.jdx.dev/registry.html by short name, alias,
+  backend or description, and to install a tool globally with `mise use -g`.
+- Add the command `Manage Mise Tools` to list the globally installed tools, upgrade them one at a time or all
+  at once, pin a different version, and remove them.
+- Add the preference `Mise Binary Path` for installs mise cannot be found in automatically.
+
 ## [Add shadcn/ui Registry Features] - 2025-09-29
 
 - Add the action `Copy shadcn/ui Registry Install Command` to copy the install command to the clipboard.
@@ -14,6 +22,7 @@
 ## [✨ AI Enhancements] - 2025-04-02
 
 AI Tools to:
+
 - Get SVG Logo
 - Get SVG Component
 
@@ -23,7 +32,7 @@ AI Tools to:
 
 ## [Update] - 2025-02-21
 
-- Updated the SVG logo request form.  
+- Updated the SVG logo request form.
 - Added the action `Visit SVG Brand Website` to open the SVG brand website in the browser.
 - Added the action `Copy SVG File` to copy the SVG as a file to the clipboard.
 

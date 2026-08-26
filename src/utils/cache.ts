@@ -1,6 +1,7 @@
 import { Cache } from "@raycast/api";
 
 export const FIVE_MINUTES_MS = 1000 * 60 * 5;
+export const ONE_DAY_MS = 1000 * 60 * 60 * 24;
 export const ONE_WEEK_MS = 1000 * 60 * 60 * 24 * 7;
 
 type FetchDataFn<T> = () => Promise<T>;
