@@ -33,6 +33,12 @@ const decodeEntities = (value: string) =>
 
 const stripMarkup = (value: string) => decodeEntities(value.replace(/<!--.*?-->/gs, "").replace(/<[^>]+>/g, "")).trim();
 
+/** Alias lists, verification badges and "details" links, whose text would otherwise leak into the cells. */
+const stripDecorations = (value: string) =>
+  value
+    .replace(/<span class="(?:aliases|verification)"[^>]*>.*?<\/span>/gs, "")
+    .replace(/<a class="mise-versions"[^>]*>.*?<\/a>/gs, "");
+
 /** The Full column: one backend per line, each optionally wrapped in a link. */
 const parseBackends = (cell: string): MiseBackend[] =>
   cell
@@ -52,8 +58,10 @@ const parseBackends = (cell: string): MiseBackend[] =>
     });
 
 export const parseRegistryHtml = (html: string): MiseRegistryEntry[] => {
-  const start = html.indexOf("<tbody");
-  const end = html.indexOf("</tbody>");
+  // The page also has a legend table of verification badges, so find the registry by its header.
+  const header = html.search(/<th\b[^>]*>Backends/);
+  const start = header === -1 ? -1 : html.indexOf("<tbody", header);
+  const end = start === -1 ? -1 : html.indexOf("</tbody>", start);
   if (start === -1 || end === -1) {
     throw new Error("The mise registry page no longer contains a table.");
   }
@@ -62,14 +70,15 @@ export const parseRegistryHtml = (html: string): MiseRegistryEntry[] => {
 
   return rows
     .map((row) => {
-      const cells = [...row.matchAll(/<td\b[^>]*>(.*?)<\/td>/gs)].map((match) => match[1]);
+      const cells = [...stripDecorations(row).matchAll(/<td\b[^>]*>(.*?)<\/td>/gs)].map((match) => match[1]);
       return {
         short: stripMarkup(cells[0] ?? ""),
         backends: parseBackends(cells[1] ?? ""),
         os: stripMarkup(cells[2] ?? "")
           .split(",")
           .map((value) => value.trim())
-          .filter(Boolean),
+          // The page says "any" where it used to leave the cell empty.
+          .filter((value) => value && value !== "any"),
       };
     })
     .filter((entry) => entry.short.length > 0);
@@ -77,7 +86,8 @@ export const parseRegistryHtml = (html: string): MiseRegistryEntry[] => {
 
 const fetchRegistryTable = () =>
   withCache(
-    "mise_registry_table",
+    // Versioned so a table parsed from an older page layout is not served from the cache.
+    "mise_registry_table_v2",
     async () => {
       const response = await fetch(MISE_REGISTRY_URL);
       if (!response.ok) {

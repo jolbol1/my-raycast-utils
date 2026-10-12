@@ -3,7 +3,7 @@
   "name": "my-raycast-utils",
   "title": "My Raycast Utils",
   "description": "My custom utilities",
-  "icon": "command-icon.png",
+  "icon": "search-svg-v3.png",
   "author": "1weiho",
   "contributors": [
     "ridemountainpig",
@@ -11,7 +11,8 @@
   ],
   "categories": [
     "Design Tools",
-    "Developer Tools"
+    "Developer Tools",
+    "Media"
   ],
   "license": "MIT",
   "commands": [
@@ -20,6 +21,7 @@
       "title": "Search SVG Icons",
       "description": "Search SVG icons via svgl & local icons",
       "mode": "view",
+      "icon": "search-svg-v3.png",
       "keywords": [
         "svg",
         "icon",
@@ -135,7 +137,7 @@
       "title": "Convert SVG to PNG",
       "description": "Convert an SVG file to PNG with custom scale",
       "mode": "no-view",
-      "icon": "command-icon.png",
+      "icon": "convert-svg-to-png-v2.png",
       "keywords": [
         "svg",
         "png",
@@ -187,7 +189,7 @@
       "title": "Transcribe Video",
       "description": "Transcribe a video file from Finder or clipboard",
       "mode": "no-view",
-      "icon": "transcribe-command.png",
+      "icon": "transcribe-video-v2.png",
       "keywords": [
         "transcribe",
         "video",
@@ -200,7 +202,7 @@
       "title": "Delay Audio",
       "description": "Delay audio in a video or audio file",
       "mode": "no-view",
-      "icon": "delay-command.png",
+      "icon": "delay-audio-v2.png",
       "keywords": [
         "delay",
         "audio",
@@ -227,7 +229,7 @@
         "image",
         "fal-ai"
       ],
-      "icon": "remove-command.png",
+      "icon": "remove-background-v2.png",
       "arguments": [
         {
           "name": "model",
@@ -285,6 +287,7 @@
       "title": "Search Mise Registry",
       "description": "Search the mise registry and install tools globally with mise use -g",
       "mode": "view",
+      "icon": "mise-registry-v2.png",
       "keywords": [
         "mise",
         "registry",
@@ -299,6 +302,7 @@
       "title": "Manage Mise Tools",
       "description": "List, upgrade and remove your globally installed mise tools",
       "mode": "view",
+      "icon": "mise-tools-v2.png",
       "keywords": [
         "mise",
         "tools",
@@ -306,6 +310,63 @@
         "upgrade",
         "outdated",
         "uninstall"
+      ]
+    },
+    {
+      "name": "download-video",
+      "title": "Download Video",
+      "description": "Download a video, or just its audio, with yt-dlp",
+      "mode": "view",
+      "icon": "download-video-v3.png",
+      "keywords": [
+        "youtube",
+        "yt-dlp",
+        "video",
+        "download",
+        "mp3",
+        "audio"
+      ]
+    },
+    {
+      "name": "download-thumbnail",
+      "title": "Download Video Thumbnail",
+      "description": "Browse every thumbnail a video publishes and download the one you want",
+      "mode": "view",
+      "icon": "download-thumbnail-v3.png",
+      "keywords": [
+        "youtube",
+        "thumbnail",
+        "cover",
+        "poster",
+        "image"
+      ]
+    },
+    {
+      "name": "video-transcript",
+      "title": "Get Video Transcript",
+      "description": "Read, copy and save the subtitles of a video",
+      "mode": "view",
+      "icon": "video-transcript-v2.png",
+      "keywords": [
+        "youtube",
+        "transcript",
+        "subtitles",
+        "captions",
+        "srt"
+      ]
+    },
+    {
+      "name": "video-info",
+      "title": "Show Video Info",
+      "description": "Show the metadata of a video: channel, duration, views, chapters and formats",
+      "mode": "view",
+      "icon": "video-info-v2.png",
+      "keywords": [
+        "youtube",
+        "metadata",
+        "info",
+        "chapters",
+        "views"
       ]
     }
   ],
@@ -317,6 +378,107 @@
       "type": "textfield",
       "required": false,
       "placeholder": "/opt/homebrew/bin/mise"
+    },
+    {
+      "name": "videoDownloadPath",
+      "title": "Video Download Path",
+      "description": "Where downloaded videos, thumbnails and transcripts are saved.",
+      "type": "directory",
+      "default": "~/Downloads",
+      "required": false
+    },
+    {
+      "name": "ytDlpPath",
+      "title": "yt-dlp Path",
+      "description": "Path to the yt-dlp binary. Leave empty to detect it automatically.",
+      "type": "textfield",
+      "required": false,
+      "placeholder": "/opt/homebrew/bin/yt-dlp"
+    },
+    {
+      "name": "ffmpegPath",
+      "title": "ffmpeg Path",
+      "description": "Path to the ffmpeg binary, used to merge, recode and extract audio. Leave empty to detect it automatically.",
+      "type": "textfield",
+      "required": false,
+      "placeholder": "/opt/homebrew/bin/ffmpeg"
+    },
+    {
+      "name": "autoLoadVideoUrl",
+      "title": "Auto-Load Video URL",
+      "description": "Where the video commands take their URL from when they open.",
+      "type": "dropdown",
+      "required": false,
+      "default": "clipboard",
+      "data": [
+        {
+          "title": "Clipboard",
+          "value": "clipboard"
+        },
+        {
+          "title": "Selected Text",
+          "value": "selection"
+        },
+        {
+          "title": "Active Browser Tab",
+          "value": "browser"
+        },
+        {
+          "title": "Nothing",
+          "value": "none"
+        }
+      ]
+    },
+    {
+      "name": "forceIpv4",
+      "title": "Force IPv4",
+      "description": "Route yt-dlp over IPv4. Helps when downloads fail with bot-check or 403 errors.",
+      "type": "checkbox",
+      "label": "Force IPv4 for yt-dlp",
+      "default": false,
+      "required": false
+    },
+    {
+      "name": "cookiesFromBrowser",
+      "title": "Use Cookies from Browser",
+      "description": "Pass your logged-in browser cookies to yt-dlp, for age-restricted or members-only media.",
+      "type": "dropdown",
+      "required": false,
+      "default": "none",
+      "data": [
+        {
+          "title": "None",
+          "value": "none"
+        },
+        {
+          "title": "Safari",
+          "value": "safari"
+        },
+        {
+          "title": "Chrome",
+          "value": "chrome"
+        },
+        {
+          "title": "Brave",
+          "value": "brave"
+        },
+        {
+          "title": "Microsoft Edge",
+          "value": "edge"
+        },
+        {
+          "title": "Firefox",
+          "value": "firefox"
+        },
+        {
+          "title": "Arc",
+          "value": "arc"
+        },
+        {
+          "title": "Vivaldi",
+          "value": "vivaldi"
+        }
+      ]
     }
   ],
   "dependencies": {
