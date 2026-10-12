@@ -37,6 +37,19 @@ const candidates = (): string[] => [
 let resolved: string | undefined;
 let lookupFailed = false;
 
+/**
+ * Existing on disk is not enough: resvg's releases only ship an x86_64 macOS build, so
+ * a mise (aqua) install fails with EBADARCH (-86) on Apple Silicon without Rosetta.
+ */
+const runs = async (binary: string): Promise<boolean> => {
+  try {
+    await execa(binary, ["--version"]);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 /** Locates the resvg binary, memoised for the lifetime of the command. */
 export const findResvg = async (): Promise<string> => {
   if (resolved) {
@@ -47,7 +60,7 @@ export const findResvg = async (): Promise<string> => {
   }
 
   for (const candidate of candidates()) {
-    if (existsSync(candidate)) {
+    if (existsSync(candidate) && (await runs(candidate))) {
       resolved = candidate;
       return resolved;
     }
